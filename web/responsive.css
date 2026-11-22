@@ -12,3 +12,9 @@
 
 .remote-output{display:flex;flex-direction:column;gap:2px;min-width:110px;max-width:210px;font-size:10px}.remote-output select{max-width:100%;min-width:0;background:var(--panel,#181a20);color:inherit;border:1px solid var(--line);padding:4px}.remote-output #remote-status{font-size:9px;max-width:210px;overflow-wrap:anywhere}
 @media(max-width:650px){.remote-output{max-width:125px;min-width:100px}.topbar .search{min-width:0;flex:1}.remote-output #remote-status{font-size:8px}}
+
+@media(max-width:650px){
+  .sidebar nav{flex-wrap:wrap}
+  .pod-banner{min-height:205px;background-position:center}
+  .pod-return{align-items:flex-start;gap:12px}
+}

@@ -25,6 +25,20 @@ function radio() {
       return `<article class="station" data-quick-kind="station" data-quick-index="${i}"><div class="station-top"><span>${String(i+1).padStart(2,'0')} / FREQUENCY</span><span>◎</span></div><h3>${esc(s.name)}</h3><p>${esc(new URL(s.url).hostname)}</p><div class="station-bottom"><button data-radio="${i}">▶ Tune in</button><button data-preset="${i}">${saved?.preset ? '★ Preset' : '☆ Preset'}</button>${state.radioTab === 'My stations' ? `<button data-station-delete="${i}" aria-label="Remove ${esc(s.name)}">×</button>` : ''}${quickButton(s.name)}</div></article>`;
     }).join('') || '<p class="empty">No stations here. Add a stream or search the directory.</p>'}</div><form id="station-form" class="inline-form"><input name="name" placeholder="Station name" required maxlength="200" aria-label="Station name"><input type="url" name="url" required placeholder="Paste a stream URL…" aria-label="Stream URL"><button class="secondary">+ Add station</button></form>`;
 }
+function podPage() {
+  return `<section class="pod-page">
+    <header class="pod-banner">
+      <div><h1>We4zlP0D</h1><p>Take your desktop queue, listening modes and recorded radio with you.</p>
+      <button class="primary" data-action="we4zlp0d-take" aria-controls="pod-plan" aria-expanded="false">Take on We4zlP0D</button></div>
+    </header>
+    <section id="pod-plan" class="pod-plan" aria-label="Prepare trip" hidden></section>
+    <section class="pod-return">
+      <img src="we4zlp0d-dock.webp" alt="" width="96" height="96">
+      <div><h2>Back at your desk</h2><p>Open the return file from your USB companion to preview the track and position saved on your player.</p>
+      <button class="secondary" data-action="we4zlp0d-return">Continue on desktop</button></div>
+    </section>
+  </section>`;
+}
 export function renderMain() {
   document.dispatchEvent(new Event('quick-actions-close'));
   let html = '';
@@ -43,8 +57,12 @@ export function renderMain() {
     }
     case 'queue': html = head('YOUR PLAY QUEUE','The queue is yours.',`${state.queue.length} tracks up next.`) + '<div class="hero-actions"><button class="primary" data-action="save-queue">Save to playlist</button><button class="secondary" data-action="clear-queue">Clear queue</button></div>' + queueRows(); break;
     case 'radio': html = radio(); break;
+    case 'we4zlp0d': html = podPage(); break;
   }
-  $('#content').innerHTML = html;
+  const content = $('#content');
+  // Background library updates can render again while the trip form is open.
+  if (!(content.querySelector('.pod-page') && state.view === 'we4zlp0d' &&
+        !state.query && !state.loading && !state.error)) content.innerHTML = html;
   $('#radio-preset-count').textContent = `${state.stations.filter(s => s.preset).length} presets`;
   $('#breadcrumb').textContent = state.query ? 'SEARCH' : state.view.toUpperCase();
   document.querySelectorAll('nav [data-view]').forEach(b => {b.classList.toggle('active',b.dataset.view === state.view);b.setAttribute('aria-current', b.dataset.view === state.view ? 'page' : 'false');});

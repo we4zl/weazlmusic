@@ -14,7 +14,10 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.locator('[name=username]').fill('alice');
     await page.locator('[name=password]').fill('test-password');
     await page.getByRole('button',{name:'Sign in',exact:false}).click();
-    await page.getByRole('button',{name:'Take on We4zlP0D'}).waitFor();
+    await page.getByRole('navigation').getByRole('button',{name:'We4zlP0D',exact:true}).click();
+    await page.getByRole('heading',{name:'We4zlP0D',exact:true}).waitFor();
+    assert.equal(await page.locator('[data-view=we4zlp0d]').getAttribute('aria-current'),'page');
+    await page.locator('.pod-return img').evaluate(img => img.decode());
     await page.evaluate(async () => {
       const {state} = await import('/state.js');
       const {play,audio} = await import('/player.js');
@@ -24,6 +27,14 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       audio.currentTime = Math.min(1.2,audio.duration / 2);
     });
     await page.getByRole('button',{name:'Take on We4zlP0D'}).click();
+    assert.equal(await page.locator('#modal').evaluate(el => el.open),false);
+    await page.setViewportSize({width:390,height:700});
+    assert.ok(await page.locator('#pod-plan').evaluate(el => el.scrollWidth <= el.clientWidth));
+    await page.locator('#we4zlp0d-pack button[type=submit]').scrollIntoViewIfNeeded();
+    assert.ok(await page.locator('#we4zlp0d-pack button[type=submit]').evaluate(el => {
+      const r = el.getBoundingClientRect();
+      return document.elementFromPoint(r.x + r.width/2,r.y + r.height/2) === el;
+    }));
     // Playback can advance while the USB packing form is open.
     const atOpen = await page.evaluate(async () => (await import('/player.js')).audio.currentTime);
     await page.evaluate(async () => { (await import('/player.js')).audio.currentTime = 8; });

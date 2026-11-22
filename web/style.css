@@ -215,4 +215,18 @@ button[aria-pressed=true]{color:var(--yellow)}
 .track-row strong,.track-row small,.queue-item strong,.queue-item small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #content>h2{margin:24px 0 16px}
 
-.portable-actions{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.pod-page{max-width:1060px;min-width:0}
+.pod-banner{display:flex;align-items:flex-end;min-height:260px;padding:clamp(20px,4vw,48px);background:linear-gradient(90deg,#0b1020f5 0%,#101324cc 37%,transparent 85%),url("we4zlp0d-night-tunnel.webp") center/cover}
+.pod-banner>div{max-width:22rem}
+.pod-banner h1{font-size:clamp(35px,5vw,64px);letter-spacing:-.055em;margin:0}
+.pod-page p{line-height:1.55}
+.pod-banner p{color:#efeef4;margin:10px 0 22px}
+.pod-return{display:flex;align-items:center;gap:22px;margin:26px 0;border-top:1px solid var(--line);padding-top:24px}
+.pod-return img{width:clamp(60px,10vw,96px);height:auto}
+.pod-return h2,.pod-plan h2{margin:0}
+.pod-return p,.pod-plan>p{color:var(--muted);max-width:56ch}
+.pod-plan{margin:24px 0;scroll-margin-top:16px;overflow-wrap:anywhere}
+.pod-plan form{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));align-items:start}
+.pod-plan select{width:100%;min-width:0}
+.pod-form-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.pod-form-actions .primary{margin:0}

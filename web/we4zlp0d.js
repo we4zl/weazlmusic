@@ -22,10 +22,19 @@ function snapshot() {
 }
 
 export function takeOnWe4zlP0D() {
+  const panel = $('#pod-plan');
+  if (!panel.hidden) { panel.querySelector('input').focus(); return; }
   const trip = snapshot();
+  const opener = document.querySelector('[data-action="we4zlp0d-take"]');
+  const finish = () => {
+    panel.hidden = true;
+    panel.replaceChildren();
+    opener.setAttribute('aria-expanded','false');
+    opener.focus();
+  };
   const playlists = '<option value="">None</option>' + state.playlists.map(playlist =>
     `<option value="${esc(playlist.id)}">${esc(playlist.name)}</option>`).join('');
-  modal(`<h2>Take on We4zlP0D</h2><p>${esc(trip.queue[0].title)} · ${duration(trip.positionMs / 1000)}</p>
+  panel.innerHTML = `<h2>Prepare trip</h2><p>${esc(trip.queue[0].title)} · ${duration(trip.positionMs / 1000)}</p>
     <details><summary>Trip queue (${trip.queue.length})</summary><ol>${trip.queue.map(item =>
       `<li>${esc(item.title || item.trackId)}</li>`).join('')}</ol></details>
     <p>Download the trip file, then sync it to the player in USB Storage mode with the Linux companion.</p>
@@ -36,8 +45,14 @@ export function takeOnWe4zlP0D() {
         `<option value="${esc(playlist.id)}">${esc(playlist.name)}</option>`).join('')}</select></label>
       <label>Flight Recorder favorite<select name="station"><option value="">None</option>${state.stations.filter(station => station.id).map(station =>
         `<option value="${esc(station.id)}">${esc(station.name)}</option>`).join('')}</select></label>
-      <button type="submit" class="primary">Download trip file</button>
-    </form>`);
+      <div class="pod-form-actions"><button type="submit" class="primary">Download trip file</button>
+      <button type="button" class="secondary" id="pod-cancel">Cancel</button></div>
+    </form>`;
+  panel.hidden = false;
+  opener.setAttribute('aria-expanded','true');
+  panel.scrollIntoView({block:'start'});
+  panel.querySelector('input').focus({preventScroll:true});
+  $('#pod-cancel').onclick = finish;
   $('#we4zlp0d-pack').onsubmit = event => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -55,7 +70,7 @@ export function takeOnWe4zlP0D() {
     link.download = 'we4zlp0d-trip.json';
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    closeModal();
+    finish();
   };
 }
 
@@ -92,7 +107,8 @@ export function continueOnDesktop() {
       if (input.files[0] !== file) return;
       preview.innerHTML = `<p>${esc(session.current.title)} · ${duration(session.current.position)}</p>
         <button id="we4zlp0d-apply" class="primary">Continue playback</button>
-        <button class="secondary dialog-close">Cancel</button>`;
+        <button class="secondary" id="pod-return-cancel">Cancel</button>`;
+      preview.querySelector('#pod-return-cancel').onclick = closeModal;
       preview.querySelector('#we4zlp0d-apply').onclick = async () => {
         if (state.remote || state.remotePending) { toast('Select this browser as the output first.'); return; }
         closeModal();
