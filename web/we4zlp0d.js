@@ -1,0 +1,97 @@
+import {state, $, esc, duration, toast} from './state.js';
+import {modal, closeModal} from './dialogs.js';
+import {audio, play, stop} from './player.js';
+import {renderQueue} from './render.js';
+import {saveState} from './api.js';
+import {uuid} from './device.js';
+
+const modes = ['Road Trip', 'Workout', 'Flowstate'];
+const entry = item => ({entryId:item._entryId || uuid(), trackId:item.id, title:item.title,
+  artist:item.artist, album:item.album, durationMs:Math.round(item.duration * 1000) || 0});
+
+function snapshot() {
+  const current = state.current?.url || state.flightPlayback ? state.resume : state.current;
+  if (!current || current.url) throw new Error('Choose a library track first.');
+  const queue = [current, ...state.queue.filter(item => !item.url)].map(entry);
+  const live = current === state.current && Boolean(audio.getAttribute('src'));
+  const seconds = state.remote && current === state.current ? state.remote.state.positionMs / 1000 :
+    live ? audio.currentTime : current.position;
+  return {version:1, kind:'we4zlp0d-trip', queue, currentEntryId:queue[0].entryId,
+    positionMs:Math.max(0, Math.round((seconds || 0) * 1000)), origin:location.origin};
+}
+
+export function takeOnWe4zlP0D() {
+  const trip = snapshot();
+  const playlists = '<option value="">None</option>' + state.playlists.map(playlist =>
+    `<option value="${esc(playlist.id)}">${esc(playlist.name)}</option>`).join('');
+  modal(`<h2>Take on We4zlP0D</h2><p>${esc(trip.queue[0].title)} · ${duration(trip.positionMs / 1000)}</p>
+    <form id="we4zlp0d-pack" class="auth-form">
+      <label>Listening hours<input type="number" name="hours" min="0.25" max="168" step="0.25" value="8" required></label>
+      ${modes.map((name,index) => `<label>${name}<select name="mode${index}">${playlists}</select></label>`).join('')}
+      <label>Pinned playlists<select name="pin" multiple>${state.playlists.map(playlist =>
+        `<option value="${esc(playlist.id)}">${esc(playlist.name)}</option>`).join('')}</select></label>
+      <label>Flight Recorder favorite<select name="station"><option value="">None</option>${state.stations.filter(station => station.id).map(station =>
+        `<option value="${esc(station.id)}">${esc(station.name)}</option>`).join('')}</select></label>
+      <button type="submit" class="primary">Download trip file</button>
+    </form>`);
+  $('#we4zlp0d-pack').onsubmit = event => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const data = {...trip, hours:Number(form.get('hours')), modePlaylists:Object.fromEntries(
+      modes.map((name,index) => [name,form.get('mode'+index)]).filter(([,id]) => id)),
+      pinPlaylistIds:form.getAll('pin'), favoriteStationId:form.get('station') || null};
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'we4zlp0d-trip.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    closeModal();
+  };
+}
+
+function parseReturn(text) {
+  const trip = JSON.parse(text);
+  if (trip.version !== 1 || trip.kind !== 'we4zlp0d-return' || trip.origin !== location.origin ||
+      !Array.isArray(trip.queue) || trip.queue.length > 1000 || !Number.isSafeInteger(trip.positionMs) ||
+      trip.positionMs < 0 || trip.queue.some(item => !item || typeof item.entryId !== 'string' ||
+        typeof item.trackId !== 'string' || !item.trackId || item.trackId.length > 256 ||
+        !Number.isSafeInteger(item.durationMs) || item.durationMs < 0) ||
+      new Set(trip.queue.map(item => item.entryId)).size !== trip.queue.length) {
+    throw new Error('Choose a valid We4zlP0D return file for this server.');
+  }
+  const index = trip.queue.findIndex(item => item.entryId === trip.currentEntryId);
+  if (index < 0) throw new Error('The return file has no current track.');
+  const track = item => ({id:item.trackId, _entryId:item.entryId, title:String(item.title || item.trackId),
+    artist:String(item.artist || ''), album:String(item.album || ''), duration:item.durationMs / 1000});
+  return {current:{...track(trip.queue[index]), position:trip.positionMs / 1000},
+    queue:trip.queue.slice(index + 1).map(track)};
+}
+
+export function continueOnDesktop() {
+  modal('<h2>Continue on desktop</h2><label>We4zlP0D return file<input id="we4zlp0d-return" type="file" accept=".json,application/json"></label><div id="we4zlp0d-preview" aria-live="polite"></div>');
+  $('#we4zlp0d-return').onchange = async event => {
+    const file = event.currentTarget.files[0];
+    const preview = $('#we4zlp0d-preview');
+    preview.replaceChildren();
+    if (!file) return;
+    try {
+      if (file.size > 1024 * 1024) throw new Error('The return file is too large.');
+      const session = parseReturn(await file.text());
+      preview.innerHTML = `<p>${esc(session.current.title)} · ${duration(session.current.position)}</p>
+        <button id="we4zlp0d-apply" class="primary">Continue playback</button>
+        <button class="secondary dialog-close">Cancel</button>`;
+      preview.querySelector('#we4zlp0d-apply').onclick = async () => {
+        if (state.remote) { toast('Select this browser as the output first.'); return; }
+        closeModal();
+        stop();
+        state.queue = session.queue;
+        await play(session.current, false);
+        renderQueue();
+        saveState();
+      };
+    } catch (error) {
+      preview.textContent = error.message;
+    }
+  };
+}

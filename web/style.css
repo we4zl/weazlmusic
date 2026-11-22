@@ -214,3 +214,5 @@ button[aria-pressed=true]{color:var(--yellow)}
 .track-row>button:first-child>span,.queue-item>button:first-child>span:last-child{min-width:0}
 .track-row strong,.track-row small,.queue-item strong,.queue-item small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #content>h2{margin:24px 0 16px}
+
+.portable-actions{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}

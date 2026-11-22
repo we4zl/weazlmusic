@@ -10,6 +10,7 @@ import {openLLMSettings} from './llm-settings.js';
 import {openAdminSettings} from './admin-settings.js';
 import {buildMood, cancelMood} from './mood.js';
 import {closeFlightRecorder} from './flight-recorder.js';
+import {takeOnWe4zlP0D, continueOnDesktop} from './we4zlp0d.js';
 let searchTimer;
 function signedOut() {
  cancelQuickActions();
@@ -44,6 +45,8 @@ async function action(button) {
   if (d.stationDelete !== undefined) {const url = state.visibleStations[Number(d.stationDelete)].url;state.stations = state.stations.filter(s => s.url !== url);renderMain();saveState();}
   if (d.playlistRemove !== undefined) {await api('playlists','POST',{id:state.playlist.id,remove:[Number(d.playlistRemove)]});await navigate('playlist');await refreshPlaylists();}
   switch (d.action) {
+    case 'we4zlp0d-take': takeOnWe4zlP0D();break;
+    case 'we4zlp0d-return': continueOnDesktop();break;
     case 'save-queue': addToPlaylistDialog([state.current?.url ? state.resume : state.current,...state.queue],'the queue');break;
     case 'save-tracks': addToPlaylistDialog(state.tracks,state.view === 'album' ? 'this album' : 'these tracks');break;
     case 'clear-queue': state.queue = [];renderQueue();renderPlayer();saveState();break;
