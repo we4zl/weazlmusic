@@ -18,23 +18,25 @@ import (
 const contractRevision = "2026-10-03.2"
 
 type apiV1 struct {
-	remote       *remoteStore
-	s            *Server
-	db           *sql.DB
-	mu           sync.Mutex
-	ctx          context.Context
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
-	lock         *os.File
-	installation string
-	now          func() time.Time
-	active       map[string]context.CancelFunc
-	packaging    map[string]bool
-	moodCancel   map[string]context.CancelFunc
-	snapshot     map[string]*librarySnapshot
-	mediaEnabled bool
-	pod          *podStore
-	cpu          *mediaCPUPlan
+	remote           *remoteStore
+	s                *Server
+	db               *sql.DB
+	mu               sync.Mutex
+	ctx              context.Context
+	cancel           context.CancelFunc
+	wg               sync.WaitGroup
+	lock             *os.File
+	installation     string
+	now              func() time.Time
+	active           map[string]context.CancelFunc
+	packaging        map[string]bool
+	moodCancel       map[string]context.CancelFunc
+	snapshot         map[string]*librarySnapshot
+	mediaEnabled     bool
+	pod              *podStore
+	cpu              *mediaCPUPlan
+	nightly          recordingSchedule
+	nextNightlySweep time.Time
 }
 
 func newV1(s *Server) (*apiV1, error) {
@@ -95,6 +97,12 @@ func newV1(s *Server) (*apiV1, error) {
 	if err = os.MkdirAll(filepath.Join(s.cfg.DataDir, "recordings"), 0700); err != nil {
 		a.close()
 		return nil, err
+	}
+	if s.cfg.NightlySourceJob != "" {
+		if err = a.configureNightly(s.cfg.NightlySourceJob); err != nil {
+			a.close()
+			return nil, err
+		}
 	}
 	if !s.cfg.DisableWorkers {
 		a.wg.Add(1)

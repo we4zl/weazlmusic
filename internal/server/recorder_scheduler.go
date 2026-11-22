@@ -77,6 +77,7 @@ func (a *apiV1) tick() {
 	if e != nil {
 		return
 	}
+	a.serviceNightly(rows)
 	streams := 0
 	for id := range a.active {
 		var j recordingJob
@@ -97,6 +98,24 @@ func (a *apiV1) tick() {
 			j.Version++
 			_ = a.put("job", j.ID, accountID(j.Username), j)
 			continue
+		}
+		if nightlyID(j.ScheduleID) && j.State == "recording" && explicitOverlap(j, rows) {
+			j.State = "finalizing"
+			j.StopReason = "explicit_override"
+			j.Version++
+			if err := a.put("job", j.ID, accountID(j.Username), j); err != nil {
+				continue
+			}
+		}
+		if nightlyID(j.ScheduleID) && j.State == "scheduled" {
+			if explicitOverlap(j, rows) {
+				a.skipNightly(j, "explicit_override")
+				continue
+			}
+			if !a.nightlyFits(j) {
+				a.skipNightly(j, "storage_full")
+				continue
+			}
 		}
 		if j.State != "finalizing" && streams+j.StationCount > 6 {
 			continue

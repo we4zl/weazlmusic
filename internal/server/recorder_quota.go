@@ -119,7 +119,7 @@ func (a *apiV1) capacity(in scheduleInput, count int, exclude string) bool {
 		if json.Unmarshal(row, &s) != nil {
 			return false
 		}
-		if s.State != "active" || s.ID == exclude {
+		if s.State != "active" || s.ID == exclude || nightlyID(s.ID) {
 			continue
 		}
 		scheduled[s.ID] = true
@@ -137,7 +137,7 @@ func (a *apiV1) capacity(in scheduleInput, count int, exclude string) bool {
 		if j.ScheduleID == exclude && j.State == "scheduled" {
 			continue
 		}
-		if !finalState(j.State) && !scheduled[j.ScheduleID] {
+		if !nightlyID(j.ScheduleID) && !finalState(j.State) && !scheduled[j.ScheduleID] {
 			windows = append(windows, recordingWindow{j.Starts, j.Ends, j.StationCount})
 		}
 	}

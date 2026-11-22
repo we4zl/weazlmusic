@@ -112,7 +112,7 @@ func (a *apiV1) retention() {
 	cutoff := a.now().AddDate(0, 0, -days)
 	for _, row := range rows {
 		var j recordingJob
-		if json.Unmarshal(row, &j) == nil && !j.Tombstone && finalState(j.State) && j.Ends.Before(cutoff) {
+		if json.Unmarshal(row, &j) == nil && !j.Tombstone && !nightlyID(j.ScheduleID) && finalState(j.State) && j.Ends.Before(cutoff) {
 			_ = a.deleteRecording(&j)
 		}
 	}

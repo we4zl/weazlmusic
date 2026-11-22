@@ -38,7 +38,11 @@ func (a *apiV1) makeJob(id, schedule string, in scheduleInput, se *session, snap
 	for _, s := range snapshots {
 		tracks = append(tracks, stationProgress{Station: s, StationID: s.ID, State: "scheduled", Segments: []recordingSegment{}, Metadata: []recordingMetadata{}})
 	}
-	return recordingJob{ID: id, ScheduleID: schedule, Name: in.Name, State: "scheduled", Username: se.User, Library: a.libraryID(se), Starts: in.Starts, Ends: in.Ends, Duration: in.Ends.Sub(in.Starts).Milliseconds(), StationCount: len(tracks), Stations: tracks, Version: 1, Reserved: estimateBytes(in.Ends.Sub(in.Starts), len(tracks))}
+	reserved := estimateBytes(in.Ends.Sub(in.Starts), len(tracks))
+	if nightlyID(schedule) {
+		reserved = 0
+	}
+	return recordingJob{ID: id, ScheduleID: schedule, Name: in.Name, State: "scheduled", Username: se.User, Library: a.libraryID(se), Starts: in.Starts, Ends: in.Ends, Duration: in.Ends.Sub(in.Starts).Milliseconds(), StationCount: len(tracks), Stations: tracks, Version: 1, Reserved: reserved}
 }
 func (a *apiV1) recorder(w http.ResponseWriter, r *http.Request, se *session) {
 	p := strings.TrimPrefix(r.URL.Path, "/api/v1/flight-recorder/")

@@ -23,6 +23,7 @@ type Config struct {
 	AccountBudgetBytes   int64
 	ReserveBytes         int64
 	RetentionDays        int
+	NightlySourceJob     string
 	SegmentSeconds       int
 	RadioClient          *http.Client
 	RadioPrivateOrigins  string
