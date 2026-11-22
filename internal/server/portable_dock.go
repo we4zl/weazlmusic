@@ -57,7 +57,7 @@ func (a *apiV1) followBrowser(w http.ResponseWriter, r *http.Request, se *sessio
 }
 
 func (a *apiV1) dockRequest(w http.ResponseWriter, r *http.Request) {
-	se, err := a.deviceIdentity(deviceSession{Username: a.nightly.Username})
+	se, err := a.deviceIdentity(deviceSession{Username: a.nightly.Username, AccessExpires: a.now().Add(3 * time.Minute)})
 	if err != nil || se.ServerURL == "" || a.libraryID(se) != a.nightly.Library {
 		verror(w, 403, "unavailable", "Dock library unavailable.")
 		return

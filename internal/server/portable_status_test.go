@@ -73,6 +73,11 @@ func TestListeningSourceAndDock(t *testing.T) {
 		t.Fatal(got)
 	}
 	w = httptest.NewRecorder()
+	a.dockRequest(w, httptest.NewRequest("GET", "/audio?id=0-0", nil))
+	if w.Code != 200 || w.Body.Len() == 0 {
+		t.Fatal("dock audio", w.Code)
+	}
+	w = httptest.NewRecorder()
 	a.dockRequest(w, httptest.NewRequest("POST", "/api/v1/auth/login", nil))
 	if w.Code != 404 {
 		t.Fatal(w.Code)
