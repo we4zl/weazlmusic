@@ -11,7 +11,7 @@ failure. This was a destination-policy issue rather than an audio codec failure.
 Set this in the operator's deployment `.env` and recreate the service:
 
 ```dotenv
-RADIO_PRIVATE_ORIGINS=https://radio.prendie.io
+RADIO_PRIVATE_ORIGINS=https://radio.prendie.io,https://synthwave.prendie.io
 ```
 
 The default remains empty/public-only. Multiple origins are comma-separated.
@@ -73,3 +73,27 @@ Rollback tag: `weazltunes-web:rollback-20261009T150427Z`; previous deployment
 `.env`, source/image receipts and compose rollback override are retained there.
 The real browser playback check used an isolated local app with the same policy;
 production verification did not sign in as a user or mutate saved presets.
+
+
+## Synthwave production repair · November 22, 2026
+
+Production DNS resolves `synthwave.prendie.io` to `10.0.0.3`. A direct GET to
+`https://synthwave.prendie.io/radio.mp3` returned stereo MP3 at 44.1 kHz.
+On the production Docker network, the previous image and environment returned
+HTTP 502 from the authenticated web relay for that stream. Adding the exact
+HTTPS origin returned HTTP 200 with `audio/mpeg`. Chromium decoded more than
+three seconds of both the Synthwave station and the existing radio station on
+the candidate image using disposable account data.
+
+Production runs source `09a9717` with both origins in its Compose environment.
+The same release includes the We4zlP0D USB trip export and desktop return.
+The previous image is tagged `weazltunes-web:rollback-20261122-snowsky`.
+The server directory `~/weazlmusic-backups/20261122-snowsky/` contains the
+previous environment, complete stopped-volume archive, SHA-256 receipt and
+Compose override. To roll back the binary from `~/weazlmusic`, use the retained
+image against the existing volume. The current environment preserves the
+Synthwave repair with the previous binary.
+
+```sh
+docker compose -f compose.yaml -f "$HOME/weazlmusic-backups/20261122-snowsky/rollback.yaml" up -d --no-build --pull never
+```

@@ -8,6 +8,8 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     '/usr/bin/chromium', args:['--autoplay-policy=no-user-gesture-required']});
   try {
     const page = await browser.newPage({viewport:{width:1440,height:900}});
+    const pageErrors = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
     await page.goto(origin);
     await page.locator('[name=username]').fill('alice');
     await page.locator('[name=password]').fill('test-password');
@@ -62,7 +64,9 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const {state} = await import('/state.js');
       const {stop} = await import('/player.js');
       stop();
-      state.flightPlayback = {};
+      const station = {stationId:'fixture', name:'Fixture station'};
+      state.flightPlayback = {manifest:{name:'Fixture recording', durationMs:60000, tracks:[station]},
+        station:station.stationId, paused:true, position:() => 9000};
       state.resume = null;
     });
     await page.getByRole('button',{name:'Take on We4zlP0D'}).click();
@@ -71,6 +75,7 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const held = JSON.parse(await fs.readFile(await (await heldDownload).path(),'utf8'));
     assert.equal(held.currentEntryId,'third');
     assert.ok(held.positionMs >= 2400 && held.positionMs < 4000);
+    assert.deepEqual(pageErrors,[]);
     console.log('PASS: click-time export, repeated track, cancel, returned seek and held library bookmark');
   } finally {
     await browser.close();
