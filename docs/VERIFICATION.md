@@ -235,7 +235,7 @@ stream cleanup, both Ollama NDJSON and vLLM SSE, fragmented IDs, duplicate/inven
 ID rejection, 20-track enforcement, same-owned-playlist reuse, immediate Navidrome
 write-through, settings/key isolation, concurrent build rejection and cancellation.
 Browser tests cover curator settings/model discovery, incremental Mood rendering,
-unchanged current playback, random play with 30 queued tracks, the Weazl favicon,
+unchanged current playback, random play across all 36 fixture tracks, the Weazl favicon,
 radio title/artist rendering and metadata connection cleanup when paused.
 A bounded live read of the installed 80s/90s station returned ICY metadata for
 Michael Jackson — Billie Jean. LLM generation is tested with isolated streaming

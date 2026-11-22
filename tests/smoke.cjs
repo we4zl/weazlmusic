@@ -44,7 +44,8 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   await page.locator('.sidebar').evaluate(e => { e.scrollTop = 0; });
   await page.locator('[data-action=resume]').click();
   await page.waitForFunction(() => document.querySelector('#play').getAttribute('aria-label') === 'Pause');
-  assert.equal(await page.locator('#queue-count').innerText(),'30');
+  // The fixture has 36 distinct tracks. One plays and the rest join the queue.
+  assert.equal(await page.locator('#queue-count').innerText(),'35');
   await page.locator('#play').click();
   await page.locator('#account').click();
   await page.locator('#configure-llm').click();
@@ -148,5 +149,5 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   await page.getByRole('button',{name:'Sign out',exact:true}).waitFor();
   assert.deepEqual(errors,[]);
   await browser.close();
-  console.log('PASS: login, random play + 30 queued, LLM settings, streaming Mood, real audio, queue, favorite, Navidrome playlist create/rename/remove/delete, search, installed presets, ICY metadata UI/lifecycle, favicon, persistence, logout, second-user isolation, mobile.');
+  console.log('PASS: login, random play + 35 queued, LLM settings, streaming Mood, real audio, queue, favorite, Navidrome playlist create/rename/remove/delete, search, installed presets, ICY metadata UI/lifecycle, favicon, persistence, logout, second-user isolation, mobile.');
 })().catch(error => {console.error(error);process.exit(1);});
