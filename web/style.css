@@ -230,3 +230,22 @@ button[aria-pressed=true]{color:var(--yellow)}
 .pod-plan select{width:100%;min-width:0}
 .pod-form-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
 .pod-form-actions .primary{margin:0}
+.pod-page .pod-banner{min-height:178px;background-position:center 60%}
+.pod-session,.pod-crates,.pod-discovery{padding:22px 0;border-bottom:1px solid var(--line)}
+.pod-session .section-title{margin:0 0 10px}
+.pod-page h2{margin:0 0 8px}
+#pod-count,.pod-page small,.pod-panels p,.pod-crates p,.pod-discovery p{color:var(--muted)}
+#pod-current strong,#pod-current small,.pod-panels strong,.pod-panels small{display:block;overflow-wrap:anywhere}
+#pod-current strong{font-size:clamp(20px,2.5vw,30px)}
+.pod-panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:24px;padding:24px 0;border-bottom:1px solid var(--line)}
+.pod-panels p:empty,.pod-panels small:empty{display:none}
+.pod-panels progress{display:block;max-width:100%;accent-color:var(--mint);margin:7px 0}
+#pod-music-status{margin-top:10px}
+.pod-albums{display:grid;grid-auto-flow:column;grid-auto-columns:clamp(106px,24%,152px);overflow-x:auto;gap:14px;padding:3px 2px 12px}
+.pod-albums .album-card{min-width:0}
+.pod-plan details{margin:10px 0}.pod-plan summary{cursor:pointer}
+.pod-prefs{grid-column:1/-1;min-width:0}
+.pod-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;padding:13px 0}
+.pod-pins{max-height:150px;overflow:auto;padding:5px}
+.pod-pins label{display:flex;align-items:center;gap:7px}.pod-pins input{width:auto}
+#pod-nav-status{font-size:10px;margin-left:auto;color:var(--mint)}

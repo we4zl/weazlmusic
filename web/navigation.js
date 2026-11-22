@@ -22,6 +22,14 @@ export async function navigate(view = state.view, query = '', more = false) {
     if (query) {
       const data = await library('search3',{query,songCount:100,albumCount:40,artistCount:0},signal);
       apply = () => {state.tracks = (data.searchResult3?.song || []).map(track);state.albums = data.searchResult3?.album || [];};
+    } else if (view === 'we4zlp0d') {
+      try {
+        const data=await library('getAlbumList2',{type:'newest',size:12},signal);
+        apply=()=>{state.albums=(data.albumList2?.album || []).slice(0,12);state.podAlbumsError=false;};
+      } catch (error) {
+        if (signal.aborted) throw error;
+        apply=()=>{state.albums=[];state.podAlbumsError=true;};
+      }
     } else if (view === 'home' || view === 'albums') {
       const offset = more ? state.offset + 40 : 0;
       const [data, stars] = await Promise.all([

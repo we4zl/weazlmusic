@@ -1,3 +1,5 @@
+import {podLibraryBookmark} from './player.js';
+import {drawPodStatus} from './pod-status.js';
 import {state, $, esc, duration} from './state.js';
 export const head = (label, title, description) => `<div class="page-head"><span class="eyebrow">${esc(label)}</span><h1>${esc(title)}</h1><p>${esc(description)}</p></div>`;
 export function cover(item, small = false) {
@@ -27,17 +29,35 @@ function radio() {
 }
 function podPage() {
   return `<section class="pod-page">
-    <header class="pod-banner">
-      <div><h1>We4zlP0D</h1><p>Take your desktop queue, listening modes and recorded radio with you.</p>
-      <button class="primary" data-action="we4zlp0d-take" aria-controls="pod-plan" aria-expanded="false">Take on We4zlP0D</button></div>
-    </header>
-    <section id="pod-plan" class="pod-plan" aria-label="Prepare trip" hidden></section>
-    <section class="pod-return">
-      <img src="we4zlp0d-dock.webp" alt="" width="96" height="96">
-      <div><h2>Back at your desk</h2><p>Open the return file from your USB companion to preview the track and position saved on your player.</p>
-      <button class="secondary" data-action="we4zlp0d-return">Continue on desktop</button></div>
-    </section>
+    <header class="pod-banner"><div><h1>We4zlP0D</h1><p>Continue your listening session away from the desk.</p></div></header>
+    <section class="pod-session"><div class="section-title"><h2>Desktop queue</h2><span id="pod-count"></span></div>
+      <div id="pod-current"></div><p>Pack this session with the USB companion. Road Trip, Workout and Flowstate each remember where you left off on the player.</p><div class="hero-actions"><button class="primary" data-action="we4zlp0d-take" aria-controls="pod-plan" aria-expanded="false">Pack this queue</button>
+      <button class="secondary" data-action="resume">Drop the Needle</button></div></section>
+    <section id="pod-plan" class="pod-plan" aria-label="Pack this queue" hidden></section>
+    <div class="pod-panels"><section><h2>Dock activity</h2><div id="pod-dock"></div><div id="pod-music-status"></div><p id="pod-confirmed"></p><small id="pod-refresh-note"></small></section>
+      <section><h2>Flight Recorder</h2><div id="pod-edition"></div><p id="pod-schedule"></p><p id="pod-radio-ready"></p><p>The dock automatically copies the latest playable recording to your SD card. Switch stations on the player at the same point in the recording.</p>
+      <button class="text-button" data-view="flight-recorder">Open Flight Recorder ↗</button></section></div>
+    <section class="pod-crates"><h2>New in the Crates</h2><p>The next music pack includes up to 12 recent albums with available tracks.</p>
+      <div class="pod-albums">${state.albums.map((a,i)=>`<button class="album-card" data-album="${i}">${cover(a)}<strong>${esc(a.name)}</strong><small>${esc(a.artist)}</small></button>`).join('') || (state.podAlbumsError ? 'Could not load recent albums from the library.' : 'No recent albums available.')}</div></section>
+    <section class="pod-discovery"><h2>Deep in the Crates</h2><p>Rarely Played draws from tracks with fewer pod listens. Off the Radar draws from tracks that appeared in fewer pod mixes. Each shelf holds up to 20 tracks and keeps its order between docks.</p></section>
+    <section class="pod-return"><img src="we4zlp0d-dock.webp" alt="" width="96" height="96">
+      <div><h2>Back at your desk</h2><p>Preview the travel queue and bookmark from your USB companion.</p><button class="secondary" data-action="we4zlp0d-return">Continue on desktop</button></div></section>
   </section>`;
+}
+
+export function updatePodSession() {
+  const target=$('#pod-current');
+  if(!target) return;
+  const bookmark=podLibraryBookmark(), t=bookmark?.item;
+  const available=!!bookmark;
+  const count=available ? 1+state.queue.filter(item=>!item.url).length : 0;
+  const desc=available ? `<strong>${esc(t.title || t.id)}</strong><small>${esc(t.artist)} · <span id="pod-position"></span></small>` : '<p>Play a library track or drop the needle to start a queue.</p>';
+  if(target._podHTML!==desc){target.innerHTML=desc;target._podHTML=desc;}
+  if(available){
+    $('#pod-position').textContent=duration(bookmark.seconds);
+  }
+  $('#pod-count').textContent=count ? `${count} ${count===1?'track':'tracks'}` : '';
+  target.parentElement.querySelector('[data-action="we4zlp0d-take"]').disabled=!available;
 }
 export function renderMain() {
   document.dispatchEvent(new Event('quick-actions-close'));
@@ -63,6 +83,7 @@ export function renderMain() {
   // Background library updates can render again while the trip form is open.
   if (!(content.querySelector('.pod-page') && state.view === 'we4zlp0d' &&
         !state.query && !state.loading && !state.error)) content.innerHTML = html;
+  if (state.view === 'we4zlp0d' && !state.query) {updatePodSession();drawPodStatus();}
   $('#radio-preset-count').textContent = `${state.stations.filter(s => s.preset).length} presets`;
   $('#breadcrumb').textContent = state.query ? 'SEARCH' : state.view.toUpperCase();
   document.querySelectorAll('nav [data-view]').forEach(b => {b.classList.toggle('active',b.dataset.view === state.view);b.setAttribute('aria-current', b.dataset.view === state.view ? 'page' : 'false');});
@@ -71,12 +92,14 @@ function queueRows() {
   return state.queue.map((t,i) => `<div class="queue-item" data-quick-kind="queue" data-quick-index="${i}"><button data-queue-play="${i}"><span class="queue-number">${String(i+1).padStart(2,'0')}</span><span><strong>${esc(t.title)}</strong><small>${esc(t.artist)}</small></span></button><button class="icon-button" data-move="${i}" aria-label="Move ${esc(t.title)} up" ${i === 0 ? 'disabled' : ''}>↑</button><button class="icon-button" data-remove="${i}" aria-label="Remove ${esc(t.title)} from queue">×</button>${quickButton(t.title)}</div>`).join('') || '<p class="empty">Room for the next good thing.<br>Add a track with +.</p>';
 }
 export function renderQueue() {
+  updatePodSession();
   document.dispatchEvent(new Event('quick-actions-close'));
   $('#queue-count').textContent = String(state.queue.length).padStart(2,'0');
   $('#queue').innerHTML = queueRows();
   if (state.view === 'queue') renderMain();
 }
 export function renderPlayer() {
+  updatePodSession();
   const flight = state.flightPlayback;
   const station = flight?.manifest.tracks.find(t => t.stationId === flight.station);
   const t = flight ? {title:station.name,artist:"Flight Recorder",album:flight.manifest.name,duration:flight.manifest.durationMs/1000} : state.current;

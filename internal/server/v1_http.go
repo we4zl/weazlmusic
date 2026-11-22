@@ -156,6 +156,8 @@ func (a *apiV1) dispatch(w http.ResponseWriter, r *http.Request, se *session) {
 			}
 			return []string{"user"}
 		}()})
+	case p == "portable/status" && (r.Method == "GET" || r.Method == "PUT"):
+		a.portableStatus(w, r, se)
 	case p == "capabilities" && r.Method == "GET":
 		a.capabilities(w, se)
 	case strings.HasPrefix(p, "auth/"):

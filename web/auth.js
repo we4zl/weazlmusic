@@ -1,3 +1,4 @@
+import {startPodStatus} from './pod-status.js';
 import {state, $, esc, toast} from './state.js';
 import {api, flushState, cancelSave} from './api.js';
 import {renderPlayer, renderQueue} from './render.js';
@@ -14,6 +15,7 @@ async function loadAccount(user) {
   const saved = await api('state');
   state.stationsVersion=saved.stationsVersion;state.stations = saved.stations || [];state.queue = saved.queue || [];state.current = saved.current || null;
   $('#login-screen').hidden = true;$('.app').hidden = false;
+  startPodStatus();
   renderQueue();renderPlayer();
   if (!user.connection) {
     if (state.admin) {

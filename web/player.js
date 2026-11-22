@@ -1,12 +1,21 @@
 import {remoteControl, remoteLoad} from './remote.js';
 import {state, $, toast, duration} from './state.js';
 import {saveState} from './api.js';
-import {renderPlayer, renderQueue} from './render.js';
+import {renderPlayer, renderQueue, updatePodSession} from './render.js';
 import {closeRadioMetadata, watchRadioMetadata} from './radio-metadata.js';
 import {stopFlightPlayback,toggleFlight,seekFlight} from './flight-playback.js';
 export const audio = new Audio();
 audio.preload = 'none';
 audio.volume = 0.7;
+
+export function podLibraryBookmark() {
+  const item = state.current?.url ? state.resume : state.current;
+  if (!item || item.url || (state.remote && !state.remote.state.playback)) return null;
+  const live = !state.flightPlayback && item === state.current && audio.readyState >= 1 && audio.getAttribute('src');
+  const seconds = state.remote && item === state.current ? state.remote.state.positionMs / 1000 :
+    live ? audio.currentTime : item.position;
+  return {item, seconds:Math.max(0, Number(seconds) || 0)};
+}
 let previousTracks = [], playVersion = 0;
 function rememberPosition() {
   if (!state.flightPlayback && state.current && !state.current.url && audio.getAttribute('src') && audio.readyState >= 1 && Number.isFinite(audio.currentTime)) state.current.position = audio.currentTime;
@@ -61,6 +70,7 @@ audio.addEventListener('ended',() => {if(state.remote||state.flightPlayback)retu
 audio.addEventListener('error',() => {if (!state.remote && audio.getAttribute('src')) {closeRadioMetadata();state.playing = false;renderPlayer();toast('Audio unavailable. The source may be offline or use an unsupported format.');}});
 audio.addEventListener('timeupdate',() => {
   if (state.remote || document.hidden || state.current?.url || state.flightPlayback) return;
+  updatePodSession();
   $('#elapsed').textContent = duration(audio.currentTime);
   $('#seek').value = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.currentTime / audio.duration * 100 : 0;
 });

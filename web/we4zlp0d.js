@@ -1,6 +1,6 @@
 import {state, $, esc, duration, toast} from './state.js';
 import {modal, closeModal} from './dialogs.js';
-import {audio, play, stop} from './player.js';
+import {podLibraryBookmark, play, stop} from './player.js';
 import {renderQueue} from './render.js';
 import {saveState} from './api.js';
 import {uuid} from './device.js';
@@ -10,13 +10,10 @@ const entry = item => ({entryId:item._entryId || uuid(), trackId:item.id, title:
   artist:item.artist, album:item.album, durationMs:Math.round(item.duration * 1000) || 0});
 
 function snapshot() {
-  if (state.remote && !state.remote.state.playback) throw new Error('Choose a library track first.');
-  const current = state.current?.url ? state.resume : state.current;
-  if (!current || current.url) throw new Error('Choose a library track first.');
-  const queue = [current, ...state.queue.filter(item => !item.url)].map(entry);
-  const live = !state.flightPlayback && current === state.current && audio.readyState >= 1 && Boolean(audio.getAttribute('src'));
-  const seconds = state.remote && current === state.current ? state.remote.state.positionMs / 1000 :
-    live ? audio.currentTime : current.position;
+  const bookmark = podLibraryBookmark();
+  if (!bookmark) throw new Error('Choose a library track first.');
+  const queue = [bookmark.item, ...state.queue.filter(item => !item.url)].map(entry);
+  const seconds = bookmark.seconds;
   return {version:1, kind:'we4zlp0d-trip', queue, currentEntryId:queue[0].entryId,
     positionMs:Math.max(0, Math.round((seconds || 0) * 1000)), origin:location.origin};
 }
@@ -34,20 +31,30 @@ export function takeOnWe4zlP0D() {
   };
   const playlists = '<option value="">None</option>' + state.playlists.map(playlist =>
     `<option value="${esc(playlist.id)}">${esc(playlist.name)}</option>`).join('');
-  panel.innerHTML = `<h2>Prepare trip</h2><p>${esc(trip.queue[0].title)} · ${duration(trip.positionMs / 1000)}</p>
+  const prefKey='pod-pack:'+JSON.stringify([state.user,state.connection?.url,state.connection?.username]);
+  let prefs={};
+  try {prefs=JSON.parse(localStorage.getItem(prefKey)) || {};} catch {}
+  panel.innerHTML = `<h2>Pack this queue</h2><p>${esc(trip.queue[0].title)} · ${duration(trip.positionMs / 1000)}</p>
     <details><summary>Trip queue (${trip.queue.length})</summary><ol>${trip.queue.map(item =>
       `<li>${esc(item.title || item.trackId)}</li>`).join('')}</ol></details>
-    <p>Download the trip file, then sync it to the player in USB Storage mode with the Linux companion.</p>
+    <p>Download this queue and run the Linux companion with the mounted SD card. Continue will start at the position shown above.</p>
     <form id="we4zlp0d-pack" class="auth-form">
       <label>Listening hours<input type="number" name="hours" min="0.25" max="168" step="0.25" value="8" required></label>
+      <details class="pod-prefs"><summary>Listening modes, pins and favorite station</summary><div class="pod-fields">
       ${modes.map((name,index) => `<label>${name}<select name="mode${index}">${playlists}</select></label>`).join('')}
-      <label>Pinned playlists<select name="pin" multiple>${state.playlists.map(playlist =>
-        `<option value="${esc(playlist.id)}">${esc(playlist.name)}</option>`).join('')}</select></label>
+      <fieldset class="pod-pins"><legend>Pinned playlists</legend>${state.playlists.map(p=>`<label><input type="checkbox" name="pin" value="${esc(p.id)}">${esc(p.name)}</label>`).join('') || 'No playlists yet.'}</fieldset>
       <label>Flight Recorder favorite<select name="station"><option value="">None</option>${state.stations.filter(station => station.id).map(station =>
         `<option value="${esc(station.id)}">${esc(station.name)}</option>`).join('')}</select></label>
+      </div></details>
       <div class="pod-form-actions"><button type="submit" class="primary">Download trip file</button>
       <button type="button" class="secondary" id="pod-cancel">Cancel</button></div>
     </form>`;
+  const controls=$('#we4zlp0d-pack').elements;
+  if (prefs.hours >= 0.25 && prefs.hours <= 168) controls.hours.value=prefs.hours;
+  modes.forEach((name,i)=>{const select=controls.namedItem('mode'+i);select.value=prefs.modePlaylists?.[name] || '';if(select.selectedIndex<0)select.selectedIndex=0;});
+  for(const input of panel.querySelectorAll('[name="pin"]'))input.checked=Array.isArray(prefs.pinPlaylistIds) && prefs.pinPlaylistIds.includes(input.value);
+  controls.station.value=prefs.favoriteStationId || '';
+  if(controls.station.selectedIndex<0)controls.station.selectedIndex=0;
   panel.hidden = false;
   opener.setAttribute('aria-expanded','true');
   panel.scrollIntoView({block:'start'});
@@ -64,6 +71,8 @@ export function takeOnWe4zlP0D() {
       toast('This trip exceeds the companion’s 1 MiB limit. Shorten the queue and try again.');
       return;
     }
+    const {hours,modePlaylists,pinPlaylistIds,favoriteStationId}=data;
+    try {localStorage.setItem(prefKey,JSON.stringify({hours,modePlaylists,pinPlaylistIds,favoriteStationId}));} catch {}
     const url = URL.createObjectURL(file);
     const link = document.createElement('a');
     link.href = url;
