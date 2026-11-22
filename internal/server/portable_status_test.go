@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -34,5 +35,46 @@ func TestPortableMusicReceipts(t *testing.T) {
 	}
 	if read(bob).Latest != nil {
 		t.Fatal("account leak")
+	}
+}
+
+func TestListeningSourceAndDock(t *testing.T) {
+	h := setup(t)
+	h.login("alice")
+	h.login("bob")
+	alice := h.native("alice", "one")
+	bob := h.native("bob", "two")
+	a := h.app.Config.Handler.(*Server).v1
+	a.nightly = recordingSchedule{ID: "pod", Username: "alice", Library: alice.Library}
+	device := "321abcde-0000-4000-8000-000000000012"
+	headers := map[string]string{"X-Weazl-Device": device}
+	if code, _, _ := h.vrequest("PUT", "portable/source", map[string]string{}, bob.Access, headers); code != 403 {
+		t.Fatal(code)
+	}
+	if code, _, _ := h.vrequest("PUT", "portable/source", map[string]string{}, alice.Access, headers); code != 204 {
+		t.Fatal(code)
+	}
+	q := map[string]any{"current": map[string]any{"id": "0-0", "title": "Repeat", "position": 7.5}, "queue": []map[string]any{{"id": "0-0", "title": "Repeat"}}}
+	if code, _, _ := h.vrequest("PUT", "portable/checkpoint", q, bob.Access, headers); code != 403 {
+		t.Fatal(code)
+	}
+	if code, _, _ := h.vrequest("PUT", "portable/checkpoint", q, alice.Access, headers); code != 204 {
+		t.Fatal(code)
+	}
+	req := httptest.NewRequest("GET", "/queue", nil)
+	w := httptest.NewRecorder()
+	a.dockRequest(w, req)
+	got := decodeData[struct {
+		Source  string
+		Current struct{ Position float64 }
+		Queue   []json.RawMessage
+	}](t, w.Body.Bytes())
+	if got.Source != device || len(got.Queue) != 1 || got.Current.Position != 7.5 {
+		t.Fatal(got)
+	}
+	w = httptest.NewRecorder()
+	a.dockRequest(w, httptest.NewRequest("POST", "/api/v1/auth/login", nil))
+	if w.Code != 404 {
+		t.Fatal(w.Code)
 	}
 }

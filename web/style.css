@@ -249,3 +249,7 @@ button[aria-pressed=true]{color:var(--yellow)}
 .pod-pins{max-height:150px;overflow:auto;padding:5px}
 .pod-pins label{display:flex;align-items:center;gap:7px}.pod-pins input{width:auto}
 #pod-nav-status{font-size:10px;margin-left:auto;color:var(--mint)}
+
+#pod-music-status small,.queue-sync small,.queue-sync strong{display:block}
+#pod-music-status progress,.queue-sync progress{display:block;width:min(100%,28rem);accent-color:var(--mint);margin:6px 0}
+.queue-sync{padding:12px 0}.pod-backup{margin:18px 0}.pod-backup summary{cursor:pointer}

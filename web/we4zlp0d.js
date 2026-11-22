@@ -34,8 +34,8 @@ export function takeOnWe4zlP0D() {
   const prefKey='pod-pack:'+JSON.stringify([state.user,state.connection?.url,state.connection?.username]);
   let prefs={};
   try {prefs=JSON.parse(localStorage.getItem(prefKey)) || {};} catch {}
-  panel.innerHTML = `<h2>Pack this queue</h2><p>${esc(trip.queue[0].title)} · ${duration(trip.positionMs / 1000)}</p>
-    <details><summary>Trip queue (${trip.queue.length})</summary><ol>${trip.queue.map(item =>
+  panel.innerHTML = `<h2>Export queue file</h2><p>${esc(trip.queue[0].title)} · ${duration(trip.positionMs / 1000)}</p>
+    <details><summary>Queue (${trip.queue.length})</summary><ol>${trip.queue.map(item =>
       `<li>${esc(item.title || item.trackId)}</li>`).join('')}</ol></details>
     <p>Download this queue and run the Linux companion with the mounted SD card. Continue will start at the position shown above.</p>
     <form id="we4zlp0d-pack" class="auth-form">
@@ -46,7 +46,7 @@ export function takeOnWe4zlP0D() {
       <label>Flight Recorder favorite<select name="station"><option value="">None</option>${state.stations.filter(station => station.id).map(station =>
         `<option value="${esc(station.id)}">${esc(station.name)}</option>`).join('')}</select></label>
       </div></details>
-      <div class="pod-form-actions"><button type="submit" class="primary">Download trip file</button>
+      <div class="pod-form-actions"><button type="submit" class="primary">Download queue file</button>
       <button type="button" class="secondary" id="pod-cancel">Cancel</button></div>
     </form>`;
   const controls=$('#we4zlp0d-pack').elements;

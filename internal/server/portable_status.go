@@ -12,6 +12,8 @@ import (
 
 // The USB companion submits a small receipt. The card and its media stay local.
 type packReport struct {
+	QueueKey string    `json:"queueKey,omitempty"`
+	Message  string    `json:"message,omitempty"`
 	Phase    string    `json:"phase"`
 	Title    string    `json:"title"`
 	Done     int64     `json:"done"`
@@ -57,12 +59,12 @@ func (a *apiV1) portableStatus(w http.ResponseWriter, r *http.Request, se *sessi
 	}
 	if r.Method == "PUT" {
 		var m packReport
-		if err := decode(r, &m); err != nil || library == "" || len(m.Title) > 1024 || m.Done < 0 || m.Done > m.Total || m.Total > 1<<50 || m.Position < 0 || m.Queue < 0 || m.Free < 0 {
+		if err := decode(r, &m); err != nil || library == "" || len(m.QueueKey) > 16 || len(m.Message) > 320 || len(m.Title) > 1024 || m.Done < 0 || m.Done > m.Total || m.Total > 1<<50 || m.Position < 0 || m.Queue < 0 || m.Free < 0 {
 			verror(w, 422, "validation_failed", "Invalid music pack receipt.")
 			return
 		}
 		switch m.Phase {
-		case "preparing", "radio", "music", "indexing", "ready", "failed":
+		case "preparing", "radio", "music", "shelves", "indexing", "ready", "failed":
 		default:
 			verror(w, 422, "validation_failed", "Unknown pack phase.")
 			return
@@ -84,6 +86,13 @@ func (a *apiV1) portableStatus(w http.ResponseWriter, r *http.Request, se *sessi
 	// The workstation reports on the operator's one configured radio dock. Only
 	// the owner of that overnight schedule sees its connection and station data.
 	if a.nightly.ID != "" && a.nightly.Username == se.User && a.nightly.Library == library {
+		source, err := a.podSource(se)
+		if err != nil {
+			verror(w, 503, "storage_unavailable", "Could not read the dock source.")
+			return
+		}
+		out["following"] = source != "" && source == r.Header.Get("X-Weazl-Device")
+		out["paired"] = true
 		var schedule recordingSchedule
 		if err := a.get("schedule", a.nightly.ID, owner, &schedule); err == nil && schedule.State == "active" {
 			out["schedule"] = map[string]any{"startsAt": schedule.NextStarts, "endsAt": schedule.NextEnds, "zone": schedule.Zone, "stations": len(schedule.Snapshots)}

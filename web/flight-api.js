@@ -1,7 +1,7 @@
 import {state} from './state.js';
-import {uuid} from './device.js';
+import {uuid,browserDevice} from './device.js';
 export async function flightAPI(path, method='GET', body, version, signal) {
-  const headers={};
+  const headers=path.startsWith('portable/') ? {'X-Weazl-Device':browserDevice()} : {};
   if(method!=='GET'){headers['X-Weazl-Request']='1';headers['Content-Type']='application/json';headers['Idempotency-Key']=uuid();}
   if(version!==undefined)headers['If-Match']=`"v${version}"`;
   const response=await fetch('/api/v1/'+path,{method,headers,signal,body:body===undefined?undefined:JSON.stringify(body)});

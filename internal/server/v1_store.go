@@ -99,7 +99,10 @@ func newV1(s *Server) (*apiV1, error) {
 		return nil, err
 	}
 	if s.cfg.NightlySourceJob != "" {
-		if err = a.configureNightly(s.cfg.NightlySourceJob); err != nil {
+		if err = a.configureNightly(s.cfg.NightlySourceJob); err == nil {
+			err = a.startDock()
+		}
+		if err != nil {
 			a.close()
 			return nil, err
 		}

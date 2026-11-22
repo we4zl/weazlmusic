@@ -31,17 +31,17 @@ function podPage() {
   return `<section class="pod-page">
     <header class="pod-banner"><div><h1>We4zlP0D</h1><p>Continue your listening session away from the desk.</p></div></header>
     <section class="pod-session"><div class="section-title"><h2>Desktop queue</h2><span id="pod-count"></span></div>
-      <div id="pod-current"></div><p>Pack this session with the USB companion. Road Trip, Workout and Flowstate each remember where you left off on the player.</p><div class="hero-actions"><button class="primary" data-action="we4zlp0d-take" aria-controls="pod-plan" aria-expanded="false">Pack this queue</button>
-      <button class="secondary" data-action="resume">Drop the Needle</button></div></section>
-    <section id="pod-plan" class="pod-plan" aria-label="Pack this queue" hidden></section>
-    <div class="pod-panels"><section><h2>Dock activity</h2><div id="pod-dock"></div><div id="pod-music-status"></div><p id="pod-confirmed"></p><small id="pod-refresh-note"></small></section>
+      <div id="pod-current"></div><div id="pod-music-status" role="status"></div><p id="pod-confirmed"></p><button class="secondary" id="pod-follow" data-action="pod-follow" hidden>Follow this browser</button><div class="hero-actions"><button class="primary" data-action="resume">Drop the Needle</button></div></section>
+
+    <div class="pod-panels"><section><h2>Dock activity</h2><div id="pod-dock"></div><small id="pod-refresh-note"></small></section>
       <section><h2>Flight Recorder</h2><div id="pod-edition"></div><p id="pod-schedule"></p><p id="pod-radio-ready"></p><p>The dock automatically copies the latest playable recording to your SD card. Switch stations on the player at the same point in the recording.</p>
       <button class="text-button" data-view="flight-recorder">Open Flight Recorder ↗</button></section></div>
-    <section class="pod-crates"><h2>New in the Crates</h2><p>The next music pack includes up to 12 recent albums with available tracks.</p>
+    <section class="pod-crates"><h2>New in the Crates</h2><p>Your dock copies the newest albums after your queue, up to 12 albums as space allows.</p>
       <div class="pod-albums">${state.albums.map((a,i)=>`<button class="album-card" data-album="${i}">${cover(a)}<strong>${esc(a.name)}</strong><small>${esc(a.artist)}</small></button>`).join('') || (state.podAlbumsError ? 'Could not load recent albums from the library.' : 'No recent albums available.')}</div></section>
     <section class="pod-discovery"><h2>Deep in the Crates</h2><p>Rarely Played draws from tracks with fewer pod listens. Off the Radar draws from tracks that appeared in fewer pod mixes. Each shelf holds up to 20 tracks and keeps its order between docks.</p></section>
     <section class="pod-return"><img src="we4zlp0d-dock.webp" alt="" width="96" height="96">
-      <div><h2>Back at your desk</h2><p>Preview the travel queue and bookmark from your USB companion.</p><button class="secondary" data-action="we4zlp0d-return">Continue on desktop</button></div></section>
+      <div><h2>Back at your desk</h2><p>Resume from a bookmark saved on the player.</p><button class="secondary" data-action="we4zlp0d-return">Continue on desktop</button></div></section>
+    <details class="pod-backup"><summary>Manual transfer</summary><button class="secondary" data-action="we4zlp0d-take" aria-controls="pod-plan" aria-expanded="false">Export queue file</button><section id="pod-plan" class="pod-plan" hidden></section></details>
   </section>`;
 }
 
@@ -57,7 +57,7 @@ export function updatePodSession() {
     $('#pod-position').textContent=duration(bookmark.seconds);
   }
   $('#pod-count').textContent=count ? `${count} ${count===1?'track':'tracks'}` : '';
-  target.parentElement.querySelector('[data-action="we4zlp0d-take"]').disabled=!available;
+  document.querySelector('[data-action="we4zlp0d-take"]').disabled=!available;
 }
 export function renderMain() {
   document.dispatchEvent(new Event('quick-actions-close'));
@@ -75,7 +75,7 @@ export function renderMain() {
       const p = state.playlist, own = p?.owner === state.connection?.username;
       html = head('NAVIDROME PLAYLIST',p?.name || '',`${state.tracks.length} tracks · ${p?.owner || ''}`) + `<div class="hero-actions"><button class="primary" data-action="play-list">▶ Play playlist</button><button class="secondary" data-download-collection="playlist">Download playlist ZIP</button>${own ? '<button class="secondary" data-action="save-tracks">Copy tracks</button><button class="secondary" data-action="rename-playlist">Rename</button><button class="secondary" data-action="append-queue">Add queue</button><button class="secondary" data-action="delete-playlist">Delete</button>' : ''}</div>` + trackList(state.tracks,own); break;
     }
-    case 'queue': html = head('YOUR PLAY QUEUE','The queue is yours.',`${state.queue.length} tracks up next.`) + '<div class="hero-actions"><button class="primary" data-action="save-queue">Save to playlist</button><button class="secondary" data-action="clear-queue">Clear queue</button></div>' + queueRows(); break;
+    case 'queue': html = head('YOUR PLAY QUEUE','The queue is yours.',`${state.queue.length} tracks up next.`) + '<div id="list-queue-sync" class="queue-sync" role="status" hidden></div><div class="hero-actions"><button class="primary" data-action="save-queue">Save to playlist</button><button class="secondary" data-action="clear-queue">Clear queue</button></div>' + queueRows(); break;
     case 'radio': html = radio(); break;
     case 'we4zlp0d': html = podPage(); break;
   }
@@ -84,6 +84,7 @@ export function renderMain() {
   if (!(content.querySelector('.pod-page') && state.view === 'we4zlp0d' &&
         !state.query && !state.loading && !state.error)) content.innerHTML = html;
   if (state.view === 'we4zlp0d' && !state.query) {updatePodSession();drawPodStatus();}
+  if (state.view === 'queue') drawPodStatus();
   $('#radio-preset-count').textContent = `${state.stations.filter(s => s.preset).length} presets`;
   $('#breadcrumb').textContent = state.query ? 'SEARCH' : state.view.toUpperCase();
   document.querySelectorAll('nav [data-view]').forEach(b => {b.classList.toggle('active',b.dataset.view === state.view);b.setAttribute('aria-current', b.dataset.view === state.view ? 'page' : 'false');});

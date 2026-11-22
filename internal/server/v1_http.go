@@ -128,6 +128,10 @@ func (a *apiV1) routes(m *http.ServeMux) {
 	m.HandleFunc("POST /api/v1/auth/refresh", a.refresh)
 	handler := a.auth(func(w http.ResponseWriter, r *http.Request, se *session) {
 		p := strings.TrimPrefix(r.URL.Path, "/api/v1/")
+		if p == "portable/checkpoint" && r.Method == "PUT" {
+			a.checkpoint(w, r, se)
+			return
+		}
 		if strings.HasPrefix(p, "remote/") {
 			if (p == "remote/receiver" && r.Method == "PUT") || (p == "remote/receiver/connections" && r.Method == "POST") {
 				a.remoteEnrollmentHTTP(w, r, se)
@@ -156,6 +160,8 @@ func (a *apiV1) dispatch(w http.ResponseWriter, r *http.Request, se *session) {
 			}
 			return []string{"user"}
 		}()})
+	case p == "portable/source" && r.Method == "PUT":
+		a.followBrowser(w, r, se, r.Header.Get("X-Weazl-Device"))
 	case p == "portable/status" && (r.Method == "GET" || r.Method == "PUT"):
 		a.portableStatus(w, r, se)
 	case p == "capabilities" && r.Method == "GET":

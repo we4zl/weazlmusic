@@ -1,4 +1,4 @@
-import {stopPodStatus} from './pod-status.js';
+import {stopPodStatus,followPodBrowser} from './pod-status.js';
 import {bindQuickActions, cancelQuickActions} from './quick-actions.js';
 import {state, $, esc, radioTrack, toast, track} from './state.js';
 import {api, library, saveState, cancelSave, flushState} from './api.js';
@@ -52,6 +52,7 @@ async function action(button) {
     case 'save-queue': addToPlaylistDialog([state.current?.url ? state.resume : state.current,...state.queue],'the queue');break;
     case 'save-tracks': addToPlaylistDialog(state.tracks,state.view === 'album' ? 'this album' : 'these tracks');break;
     case 'clear-queue': state.queue = [];renderQueue();renderPlayer();saveState();break;
+    case 'pod-follow': await followPodBrowser();break;
     case 'resume': {
       const out = await library('getRandomSongs',{size:40});
       const unique = [...new Map((out.randomSongs?.song || []).map(t => [t.id,track(t)])).values()];
