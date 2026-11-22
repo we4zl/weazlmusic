@@ -9,7 +9,7 @@ audio.preload = 'none';
 audio.volume = 0.7;
 let previousTracks = [], playVersion = 0;
 function rememberPosition() {
-  if (!state.flightPlayback && state.current && !state.current.url && Number.isFinite(audio.currentTime)) state.current.position = audio.currentTime;
+  if (!state.flightPlayback && state.current && !state.current.url && audio.getAttribute('src') && audio.readyState >= 1 && Number.isFinite(audio.currentTime)) state.current.position = audio.currentTime;
 }
 export function stop() {
   if(state.remote){remoteControl("stop");return;}

@@ -22,6 +22,9 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       audio.currentTime = Math.min(1.2,audio.duration / 2);
     });
     await page.getByRole('button',{name:'Take on We4zlP0D'}).click();
+    // Playback can advance while the USB packing form is open.
+    const atOpen = await page.evaluate(async () => (await import('/player.js')).audio.currentTime);
+    await page.evaluate(async () => { (await import('/player.js')).audio.currentTime = 8; });
     const downloadEvent = page.waitForEvent('download');
     await page.getByRole('button',{name:'Download trip file'}).click();
     const download = await downloadEvent;
@@ -31,13 +34,15 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     }
     assert.equal(trip.currentEntryId,'second');
     assert.deepEqual(trip.queue.map(entry => entry.entryId),['second','third','fourth']);
-    assert.ok(trip.positionMs > 0);
+    assert.ok(trip.positionMs >= 1200 && trip.positionMs <= Math.ceil(atOpen * 1000));
+    assert.equal(trip.origin,origin);
     assert.equal(await page.locator('#play').getAttribute('aria-label'),'Pause');
-    const returned = {...trip,kind:'we4zlp0d-return',positionMs:70,currentEntryId:'third'};
+    const returned = process.env.WE4ZL_RETURN_INPUT ? await fs.readFile(process.env.WE4ZL_RETURN_INPUT) :
+      Buffer.from(JSON.stringify({...trip,kind:'we4zlp0d-return',positionMs:2400,currentEntryId:'third'}));
     async function preview() {
       await page.getByRole('button',{name:'Continue on desktop'}).click();
       await page.locator('#we4zlp0d-return').setInputFiles({name:'return.json',mimeType:'application/json',
-        buffer:Buffer.from(JSON.stringify(returned))});
+        buffer:returned});
       await page.getByRole('button',{name:'Continue playback'}).waitFor();
     }
     await preview();
@@ -48,7 +53,25 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.waitForFunction(async () => (await import('/state.js')).state.current?._entryId === 'third');
     assert.deepEqual(await page.evaluate(async () =>
       (await import('/state.js')).state.queue.map(t => t._entryId)),['fourth']);
-    console.log('PASS: live export, duplicate occurrence, cancel, and return playback');
+    await page.waitForFunction(async () => {
+      const {audio} = await import('/player.js');
+      return !audio.paused && audio.currentTime >= 2.4 && audio.currentTime < 4;
+    });
+    // Flight Recorder takes over the audio element while retaining the library bookmark.
+    await page.evaluate(async () => {
+      const {state} = await import('/state.js');
+      const {stop} = await import('/player.js');
+      stop();
+      state.flightPlayback = {};
+      state.resume = null;
+    });
+    await page.getByRole('button',{name:'Take on We4zlP0D'}).click();
+    const heldDownload = page.waitForEvent('download');
+    await page.getByRole('button',{name:'Download trip file'}).click();
+    const held = JSON.parse(await fs.readFile(await (await heldDownload).path(),'utf8'));
+    assert.equal(held.currentEntryId,'third');
+    assert.ok(held.positionMs >= 2400 && held.positionMs < 4000);
+    console.log('PASS: click-time export, repeated track, cancel, returned seek and held library bookmark');
   } finally {
     await browser.close();
   }
