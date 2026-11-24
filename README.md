@@ -16,7 +16,7 @@ We4zlP0D X turns the USB-C HiFi Walker H2 (hw4, Ingenic X1000) into an offline c
 
 The player firmware was developed from the ground up. Its player and board code reuse no code from the original H2 firmware or Rockbox. The Bluetooth controller runs separate Broadcom microcode supplied with the factory firmware. The H51 package uses the owner's copy of that patch to reproduce the hardware-tested USB updater.
 
-[Get the experimental H51 update and check compatibility](Firmware/HifiWalker/H51/README.md).
+[Download the experimental H51 flash kit](https://github.com/we4zl/weazlmusic/releases/tag/hifiwalker-h2-h51) · [Check compatibility and read the installation guide](Firmware/HifiWalker/H51/README.md).
 
 ## Ignition
 
