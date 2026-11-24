@@ -129,3 +129,7 @@ implementation and isolated simulator follow the [remote protocol](docs/REMOTE_P
 Native receivers are separate follow-up work. Implementation/release tracking is in
 the [Sol workbook](REMOTE_PLAYBACK_WORKBOOK.md). Deployed to production 2026-11-02;
 native receiver implementation remains separate follow-up work.
+
+## WEAZL and WE4ZL branding
+
+Forking or reusing code does not grant permission to brand or market your own product with either the WEAZL™ or WE4ZL™ wordmark, the weazl head logo, or the tagline *Never Tax the Gig*™. See the [trademark and artwork notice](TRADEMARKS.md).
