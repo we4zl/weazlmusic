@@ -16,6 +16,28 @@ module.exports = async function quickActions(page, context) {
   assert.equal(await page.locator('.track-row').count(),9,'play album keeps search results');
   await page.locator('#play').click();
 
+  // Send snapshots the selected music and leaves desktop playback alone.
+  const sent = [];
+  await page.route('**/api/v1/portable/send', async route => {
+    sent.push(route.request().postDataJSON());
+    await route.fulfill({status:204});
+  });
+  async function sendSelection(target, button, kind) {
+    if (button) await target.locator('[data-quick-open]').click();
+    else await target.click({button:'right'});
+    await Promise.all([page.waitForResponse(r => r.url().endsWith('/portable/send')),
+      menu.getByRole('menuitem',{name:'Send to We4zlP0d',exact:true}).click()]);
+    const selection = sent.at(-1);
+    assert.equal(selection.kind,kind);
+    assert.ok(selection.id && selection.name && selection.tracks.length);
+    return selection;
+  }
+  const song = await sendSelection(page.locator('.track-row').first(), false, 'track');
+  assert.deepEqual(song.tracks,[song.id]);
+  const album = await sendSelection(page.locator('.album-tile').first(), true, 'album');
+  assert.equal(album.tracks.length,3);
+  assert.equal(await page.locator('#queue .queue-item').count(),2);
+
   // Keyboard path, dismissal/focus, viewport positioning, and touch button.
   const trigger = page.locator('.track-row [data-quick-open]').first();
   await trigger.focus();await page.keyboard.press('Shift+F10');
@@ -67,6 +89,8 @@ module.exports = async function quickActions(page, context) {
   await page.locator('[data-download-collection=album]').waitFor();
 
   await page.locator('nav [data-view=playlists]').click();
+  await sendSelection(page.locator('.playlist-tile').filter({hasText:'Renamed browser mixtape'}), true, 'playlist');
+  await page.unroute('**/api/v1/portable/send');
   await page.locator('.playlist-tile').filter({hasText:'Renamed browser mixtape'}).getByRole('button',{name:/Actions for/}).click();
   await menu.getByRole('menuitem',{name:'Rename playlist',exact:true}).waitFor();
   await menu.getByRole('menuitem',{name:'Delete playlist',exact:true}).click();

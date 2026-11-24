@@ -7,6 +7,7 @@ import {resetPlayer} from './player.js';
 import {cancelMood} from './mood.js';
 import {modal, closeModal} from './dialogs.js';
 import {openAdminSettings} from './admin-settings.js';
+import {queueEntry} from './device.js';
 let signOut;
 async function loadAccount(user) {
   state.user = user.username;state.admin = !!user.admin;state.connection = user.connection;
@@ -14,6 +15,8 @@ async function loadAccount(user) {
   $('.avatar').textContent = state.user[0].toUpperCase();
   const saved = await api('state');
   state.stationsVersion=saved.stationsVersion;state.stations = saved.stations || [];state.queue = saved.queue || [];state.current = saved.current || null;
+  state.queue = state.queue.map(item => item._entryId ? item : queueEntry(item));
+  if (state.current && !state.current._entryId) state.current=queueEntry(state.current);
   $('#login-screen').hidden = true;$('.app').hidden = false;
   startPodStatus();
   renderQueue();renderPlayer();

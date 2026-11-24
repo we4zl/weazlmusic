@@ -1,18 +1,26 @@
-# WeazlTunes Web: The Sovereign Acoustic Deck
+# We4zlMusic Web: The Sovereign Acoustic Deck
 
 **Release 1.0** · Version `1.0.1` · Git tag `v1.0.1`
 
-**WeazlTunes is a frontend for Navidrome**, with Internet radio and a native Subweazl backend, stamped with the new WeazlMusic mascot. Navidrome manages your music library; WeazlTunes provides the listening interface. One Go binary serves the UI, the authenticated API, and the audio pipeline.
+**We4zlMusic is a frontend for Navidrome**, with Internet radio and a native Subweazl backend, stamped with the new We4zlMusic mascot. Navidrome manages your music library; We4zlMusic provides the listening interface. One Go binary serves the UI, the authenticated API, and the audio pipeline.
 
-**WeazlTunes and Navidrome can run on the same host**, or on separate machines. Connect WeazlTunes to your existing Navidrome installation, or install Navidrome alongside it.
+**We4zlMusic and Navidrome can run on the same host**, or on separate machines. Connect We4zlMusic to your existing Navidrome installation, or install Navidrome alongside it.
 
 No frontend framework bloat. No Node runtime. No cloud identity brokers. Zero telemetry. Just pure, unadulterated acoustic grindage on your local bare metal.
 
 Complete endpoint documentation: [API reference](docs/API_REFERENCE.md) (native v1, browser API, media, artwork, radio, Mood and Flight Recorder).
 
+## Experimental HiFi Walker H2 firmware
+
+We4zlP0D X turns the USB-C HiFi Walker H2 (hw4, Ingenic X1000) into an offline companion for We4zlMusic. Build H51 plays synced music from microSD, displays album art, supports Bluetooth headphones and reports card revision hashes to the dock.
+
+The player firmware was developed from the ground up. Its player and board code reuse no code from the original H2 firmware or Rockbox. The Bluetooth controller runs separate Broadcom microcode supplied with the factory firmware. The H51 package uses the owner's copy of that patch to reproduce the hardware-tested USB updater.
+
+[Get the experimental H51 update and check compatibility](Firmware/HifiWalker/H51/README.md).
+
 ## Ignition
 
-Boot the rig using Docker. This Compose file starts WeazlTunes only; run Navidrome separately on the same host or another reachable machine, then configure its URL under **Account → Installation settings**. No Navidrome URL is preconfigured.
+Boot the rig using Docker. This Compose file starts We4zlMusic only; run Navidrome separately on the same host or another reachable machine, then configure its URL under **Account → Installation settings**. No Navidrome URL is preconfigured.
 
 ```sh
 git pull --ff-only
@@ -28,17 +36,17 @@ Hit **http://localhost:4000**, or your machine's IP on port 4000. Compose publis
 
 ### Sysop Bootstrap & Access
 
-Fresh data volumes spin up with a local-only administrator account. This local vault is isolated; the password is for WeazlMusic only and is never sent to your Navidrome instance.
+Fresh data volumes spin up with a local-only administrator account. This local vault is isolated; the password is for We4zlMusic only and is never sent to your Navidrome instance.
 
 1. Sign in as `weazladmin` / `admin`. **Change this password immediately** under **Account → Change password**.
 2. Navigate to **Account → Installation settings** and lock in your shared Navidrome backend URL.
 3. Sign out, then drop back in using your actual Navidrome credentials.
 
-Normal users authenticate against the configured Navidrome server. WeazlTunes stores only the Navidrome API token and salt—never the plaintext password. The local `weazladmin` login acts as your emergency hatch if Navidrome goes dark. New users are provisioned in the app automatically upon their first successful Navidrome login.
+Normal users authenticate against the configured Navidrome server. We4zlMusic stores only the Navidrome API token and salt—never the plaintext password. The local `weazladmin` login acts as your emergency hatch if Navidrome goes dark. New users are provisioned in the app automatically upon their first successful Navidrome login.
 
 ### Network Ops
 
-Your reverse proxy handles domain routing and TLS. WeazlTunes serves plain HTTP. Just forward to port 4000 and preserve the request `Host` header. Stream routes explicitly send `X-Accel-Buffering: no` for radio and Mood; ensure your proxy streams responses instead of choking on buffer limits.
+Your reverse proxy handles domain routing and TLS. We4zlMusic serves plain HTTP. Just forward to port 4000 and preserve the request `Host` header. Stream routes explicitly send `X-Accel-Buffering: no` for radio and Mood; ensure your proxy streams responses instead of choking on buffer limits.
 
 | Variable | Default | Payload |
 | --- | --- | --- |
@@ -46,7 +54,7 @@ Your reverse proxy handles domain routing and TLS. WeazlTunes serves plain HTTP.
 | `DATA_DIR` | `./data` (`/data` in Docker) | Encrypted user settings, SQLite vault, recording assets, and AES-GCM key. |
 | `COOKIE_SECURE` | `false` | Set to `true` to restrict session cookies to HTTPS entry points. |
 
-*Same-host setup: when both services run directly on the host, WeazlTunes can reach Navidrome through its loopback URL and listening port. When they run in separate containers, put them on a shared Docker network and use Navidrome’s service name and container port. For a container connecting to a host service, use a host address reachable from that container. `localhost` inside a container means the container itself. The same networking rules apply to your LLM endpoint.*
+*Same-host setup: when both services run directly on the host, We4zlMusic can reach Navidrome through its loopback URL and listening port. When they run in separate containers, put them on a shared Docker network and use Navidrome’s service name and container port. For a container connecting to a host service, use a host address reachable from that container. `localhost` inside a container means the container itself. The same networking rules apply to your LLM endpoint.*
 
 ## The Deck: What Works
 

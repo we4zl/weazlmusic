@@ -3,6 +3,7 @@ import {api, saveState} from './api.js';
 import {renderMain, renderPlayer, renderQueue} from './render.js';
 import {cancelNavigation, refreshPlaylists} from './navigation.js';
 import {openLLMSettings} from './llm-settings.js';
+import {queueEntry} from './device.js';
 let active = null;
 function progress() {
   const m = state.mood;
@@ -31,7 +32,7 @@ function receive(event, m) {
     if (m.followQueue && state.current?.id !== t.id && !state.queue.some(row => row.id === t.id)) {
       const moodIDs = new Set(m.tracks.map(row => row.id));
       const firstOther = state.queue.findIndex(row => !moodIDs.has(row.id));
-      state.queue.splice(firstOther < 0 ? state.queue.length : firstOther,0,t);
+      state.queue.splice(firstOther < 0 ? state.queue.length : firstOther,0,queueEntry(t));
       renderQueue();saveState();
     }
     if (state.view === 'playlist' && state.playlist?.id === m.playlist?.id) {

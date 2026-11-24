@@ -1,4 +1,4 @@
-import {stopPodStatus,followPodBrowser} from './pod-status.js';
+import {stopPodStatus,followPodBrowser,stopFollowingPod} from './pod-status.js';
 import {bindQuickActions, cancelQuickActions} from './quick-actions.js';
 import {state, $, esc, radioTrack, toast, track} from './state.js';
 import {api, library, saveState, cancelSave, flushState} from './api.js';
@@ -53,6 +53,7 @@ async function action(button) {
     case 'save-tracks': addToPlaylistDialog(state.tracks,state.view === 'album' ? 'this album' : 'these tracks');break;
     case 'clear-queue': state.queue = [];renderQueue();renderPlayer();saveState();break;
     case 'pod-follow': await followPodBrowser();break;
+    case 'pod-stop-follow': await stopFollowingPod();break;
     case 'resume': {
       const out = await library('getRandomSongs',{size:40});
       const unique = [...new Map((out.randomSongs?.song || []).map(t => [t.id,track(t)])).values()];
@@ -89,7 +90,7 @@ document.addEventListener('click',event => {
 });
 $('.brand').addEventListener('click',event => {event.preventDefault();navigate('home');});
 $('#search').addEventListener('input',event => {clearTimeout(searchTimer);const query = event.target.value.trim();searchTimer = setTimeout(() => navigate(state.view,query),180);});
-$('#play').onclick = toggle;$('#next').onclick = next;$('#previous').onclick = previous;
+$('#play').onclick = toggle;$('#next').onclick = () => next();$('#previous').onclick = previous;
 $('#stop').onclick = () => {stop();renderPlayer();};
 $('#save-queue').onclick = () => addToPlaylistDialog([state.current?.url ? state.resume : state.current,...state.queue],'the queue');
 $('#clear-queue').onclick = () => {state.queue = [];renderQueue();renderPlayer();saveState();};

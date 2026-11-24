@@ -23,13 +23,17 @@ const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.getByText('No paired music dock for this library.').waitFor();
     await page.evaluate(async () => {
       const {flightAPI} = await import('/flight-api.js');
-      await flightAPI('portable/status','PUT',{phase:'music',done:3,total:8});
+      await flightAPI('portable/status','PUT',{phase:'music',done:3,total:8,
+        title:'Continue bookmark',active:['New <track>'],selections:[{name:'Days of Thunder',tracks:6}]});
       (await import('/pod-status.js')).startPodStatus();
     });
-    const progress = page.getByRole('progressbar',{name:'Copying your queue'});
+    const progress = page.getByRole('progressbar',{name:'Checking the desktop queue'});
     await progress.waitFor();
     assert.equal(await progress.getAttribute('value'),'3');
     assert.equal(await progress.getAttribute('max'),'8');
+    await page.locator('#pod-music-status').getByText('Days of Thunder · 6 tracks',{exact:true}).waitFor();
+    await page.locator('#pod-music-status').getByText('New <track>',{exact:true}).waitFor();
+    assert.equal(await page.locator('#pod-music-status').getByText('Continue bookmark',{exact:true}).count(),0);
     assert.equal(await page.locator('#pod-nav-status').textContent(),'Syncing');
     await page.evaluate(async () => {
       const {state} = await import('/state.js');

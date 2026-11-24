@@ -11,6 +11,7 @@ import (
 )
 
 type session struct {
+	PodID                                 string
 	DeviceID                              string
 	radio                                 *radioHub
 	User, NavUser, ServerURL, Token, Salt string

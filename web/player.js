@@ -4,6 +4,8 @@ import {saveState} from './api.js';
 import {renderPlayer, renderQueue, updatePodSession} from './render.js';
 import {closeRadioMetadata, watchRadioMetadata} from './radio-metadata.js';
 import {stopFlightPlayback,toggleFlight,seekFlight} from './flight-playback.js';
+import {queueEntry} from './device.js';
+import {podPlaybackIntent} from './pod-status.js';
 export const audio = new Audio();
 audio.preload = 'none';
 audio.volume = 0.7;
@@ -29,9 +31,12 @@ export function stop() {
   playVersion++; audio.pause(); audio.removeAttribute('src'); audio.load(); state.playing = false;
 }
 export function resetPlayer() { state.remote=null;state.localOutputSaved=null;stop(); previousTracks = []; state.current = null; state.resume = null; renderPlayer(); }
-export async function play(t, remember = true) {
+export async function play(t, remember = true, explicit = true) {
   if (!t) return;
-  if(state.remote){return remoteLoad(t,state.queue);}
+  if(state.remote){
+    if(await remoteLoad(t,state.queue) && explicit) podPlaybackIntent();
+    return;
+  }
   state.transferVersion=(state.transferVersion||0)+1;
  rememberPosition();
  stopFlightPlayback();
@@ -40,33 +45,39 @@ export async function play(t, remember = true) {
   if (remember && state.current && !state.current.url) previousTracks.push(state.current);
   if (t.url && state.current && !state.current.url) state.resume = {...state.current};
   audio.pause(); audio.removeAttribute('src'); audio.load();
-  state.current = t; state.playing = false;
+  state.current = t._entryId ? t : queueEntry(t); state.playing = false;
   const position = Number(t.position) || 0;
   audio.onloadedmetadata = () => {if (version === playVersion && !t.url && position > 0 && Number.isFinite(audio.duration)) audio.currentTime = Math.min(position,audio.duration);};
   const playback = t.url ? watchRadioMetadata(t) : '';
   audio.src = t.url ? '/api/radio/stream?' + new URLSearchParams({url:t.url,playback}) : '/api/media/stream?' + new URLSearchParams({id:t.id});
   $('#seek').value = 0; $('#elapsed').textContent = '0:00';
   renderPlayer(); saveState();
+  if(explicit) podPlaybackIntent();
   try { await audio.play(); }
   catch (error) { if (version === playVersion && error.name !== 'AbortError') {closeRadioMetadata();toast('Playback could not start. Check the stream or browser audio format support.');} }
 }
 export async function toggle() {
  if(state.remotePending)state.transferVersion=(state.transferVersion||0)+1;
- if(state.remote){remoteControl(state.playing?"pause":"play");return;}
+ if(state.remote){const starting=!state.playing;if(await remoteControl(starting?"play":"pause") && starting)podPlaybackIntent();return;}
  if(state.flightPlayback){await toggleFlight();return;}
   if (!state.current) { if (state.queue.length) next(); else toast('Pick a track or station first.'); return; }
   if (state.playing) { rememberPosition(); if (state.current.url) stop(); else audio.pause(); saveState(); }
   else if (!audio.getAttribute('src')) await play(state.current,false);
-  else { try { await audio.play(); } catch { toast('Playback could not start.'); } }
+  else { try { await audio.play(); podPlaybackIntent(); } catch { toast('Playback could not start.'); } }
   renderPlayer();
 }
-export function next() { if(state.remote){remoteControl("next");return;} if (state.queue.length) { play(state.queue.shift()); renderQueue(); saveState(); } }
-export function previous() { if(state.remote){remoteControl("previous");return;} const t = previousTracks.pop(); if (t) play(t,false); }
-export function playList(items) { if (!items.length) return; if(state.remote){return remoteLoad(items[0],items.slice(1));} state.queue = items.slice(1); play(items[0]); renderQueue(); saveState(); }
-export function enqueue(t) { state.queue.push(t); renderQueue(); renderPlayer(); saveState(); toast('Added to your queue.'); }
+export function next(explicit = true) { if(state.remote){void remoteControl("next").then(applied=>{if(applied)podPlaybackIntent();});return;} if (state.queue.length) { play(state.queue.shift(),true,explicit); renderQueue(); saveState(); } }
+export function previous() { if(state.remote){void remoteControl("previous").then(applied=>{if(applied)podPlaybackIntent();});return;} const t = previousTracks.pop(); if (t) play(t,false); }
+export function playList(items) {
+  if (!items.length) return;
+  const [current,...queue] = items.map(queueEntry);
+  if (state.remote) return remoteLoad(current,queue)?.then(applied=>{if(applied)podPlaybackIntent();});
+  state.queue = queue; play(current); renderQueue(); saveState();
+}
+export function enqueue(t) { state.queue.push(queueEntry(t)); renderQueue(); renderPlayer(); saveState(); toast('Added to your queue.'); }
 audio.addEventListener('play',() => {if(state.remote)return;state.playing = true; renderPlayer();});
 audio.addEventListener('pause',() => {if(state.remote)return;state.playing = false;renderPlayer();});
-audio.addEventListener('ended',() => {if(state.remote||state.flightPlayback)return;closeRadioMetadata();state.playing = false; next(); renderPlayer();});
+audio.addEventListener('ended',() => {if(state.remote||state.flightPlayback)return;closeRadioMetadata();state.playing = false; next(false); renderPlayer();});
 audio.addEventListener('error',() => {if (!state.remote && audio.getAttribute('src')) {closeRadioMetadata();state.playing = false;renderPlayer();toast('Audio unavailable. The source may be offline or use an unsupported format.');}});
 audio.addEventListener('timeupdate',() => {
   if (state.remote || document.hidden || state.current?.url || state.flightPlayback) return;
@@ -79,6 +90,6 @@ $('#volume').addEventListener('input',event => {if(state.remote){remoteControl('
 if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('play',toggle);
   navigator.mediaSession.setActionHandler('pause',() => {if (state.playing) toggle();});
-  navigator.mediaSession.setActionHandler('nexttrack',next);
+  navigator.mediaSession.setActionHandler('nexttrack',()=>next());
   navigator.mediaSession.setActionHandler('previoustrack',previous);
 }

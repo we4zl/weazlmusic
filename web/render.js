@@ -3,7 +3,7 @@ import {drawPodStatus} from './pod-status.js';
 import {state, $, esc, duration} from './state.js';
 export const head = (label, title, description) => `<div class="page-head"><span class="eyebrow">${esc(label)}</span><h1>${esc(title)}</h1><p>${esc(description)}</p></div>`;
 export function cover(item, small = false) {
-  return item.coverArt ? `<img class="${small ? 'mini-cover' : 'cover album-art'}" width="400" height="400" src="/api/media/cover?id=${encodeURIComponent(item.coverArt)}" alt="" loading="lazy">` : `<div class="${small ? 'mini-cover' : 'cover'} art-2"><span class="cover-label">WEAZLTUNES</span>${small ? '' : `<span class="cover-title">${esc(item.title || item.name)}</span>`}</div>`;
+  return item.coverArt ? `<img class="${small ? 'mini-cover' : 'cover album-art'}" width="400" height="400" src="/api/media/cover?id=${encodeURIComponent(item.coverArt)}" alt="" loading="lazy">` : `<div class="${small ? 'mini-cover' : 'cover'} art-2"><span class="cover-label">We4zlMusic</span>${small ? '' : `<span class="cover-title">${esc(item.title || item.name)}</span>`}</div>`;
 }
 export const quickButton = label => `<button class="icon-button quick-open" data-quick-open aria-label="Actions for ${esc(label)}" aria-haspopup="menu" aria-expanded="false">⋯</button>`;
 export function trackList(items, editable = false) {
@@ -14,12 +14,12 @@ function albums(shelf = false) {
   return `<div class="album-grid ${shelf ? 'album-shelf' : ''}" ${shelf ? 'id="fresh-shelf" tabindex="0" aria-label="Recently added albums"' : ''}>${state.albums.map((a,i) => `<div class="album-tile" data-quick-kind="album" data-quick-index="${i}"><button class="album-card" data-album="${i}" aria-label="Open ${esc(a.name)}">${cover(a)}<strong>${esc(a.name)}</strong><small>${esc(a.artist)} · ${esc(a.year || '')}</small></button>${quickButton(a.name)}</div>`).join('')}</div>`;
 }
 function home() {
-  return `<section class="hero"><div class="hero-copy"><p class="eyebrow">GOOD SIGNAL. ZERO SLUDGE.</p><h1>Stay in the flow.</h1><p>Your collection. The underground airwaves.<br>All dialed in. All yours.</p><div class="hero-actions"><button class="primary" data-action="resume">▶ &nbsp; Pick up the needle</button><button class="secondary" data-view="radio">Find a frequency ↗</button></div></div><img src="appicon.png" alt="WeazlMusic mascot" width="1024" height="1024"></section><section><div class="section-title"><h2>Fresh in the crates</h2><div class="shelf-actions"><button class="icon-button" data-shelf="-1" aria-label="Previous recent albums">←</button><button class="icon-button" data-shelf="1" aria-label="Next recent albums">→</button><button class="text-button" data-view="albums">All albums ↗</button></div></div>${albums(true)}</section><section><div class="section-title"><h2>Your favorites</h2><button class="text-button" data-view="favorites">All favorites ↗</button></div>${trackList(state.tracks)}</section>`;
+  return `<section class="hero"><div class="hero-copy"><p class="eyebrow">GOOD SIGNAL. ZERO SLUDGE.</p><h1>Stay in the flow.</h1><p>Your collection. The underground airwaves.<br>All dialed in. All yours.</p><div class="hero-actions"><button class="primary" data-action="resume">▶ &nbsp; Pick up the needle</button><button class="secondary" data-view="radio">Find a frequency ↗</button></div></div><img src="appicon.png" alt="We4zlMusic mascot" width="1024" height="1024"></section><section><div class="section-title"><h2>Fresh in the crates</h2><div class="shelf-actions"><button class="icon-button" data-shelf="-1" aria-label="Previous recent albums">←</button><button class="icon-button" data-shelf="1" aria-label="Next recent albums">→</button><button class="text-button" data-view="albums">All albums ↗</button></div></div>${albums(true)}</section><section><div class="section-title"><h2>Your favorites</h2><button class="text-button" data-view="favorites">All favorites ↗</button></div>${trackList(state.tracks)}</section>`;
 }
 function radio() {
   const list = state.radioTab === 'Presets' ? state.stations.filter(s => s.preset) : state.radioTab === 'My stations' ? state.stations : state.directory;
   state.visibleStations = list;
-  return head('WEAZLTUNES / RADIO', 'The underground is still on air.', 'Eight preset slots. A whole weird web beyond them.') +
+  return head('We4zlMusic / RADIO', 'The underground is still on air.', 'Eight preset slots. A whole weird web beyond them.') +
     `<div class="tabs">${['Presets','SomaFM','Icecast','My stations'].map(tab => `<button data-tab="${tab}" class="${state.radioTab === tab ? 'active' : ''}">${tab}</button>`).join('')}</div>` +
     (state.radioTab === 'Icecast' ? '<form id="directory-search" class="inline-form"><input name="q" placeholder="Genre or station name" aria-label="Search Icecast"><button class="secondary">Search directory</button></form>' : '') +
     `<div class="section-title"><p class="eyebrow">${state.stations.filter(s => s.preset).length} / 8 PRESETS</p><span class="eyebrow">LIVE RADIO</span></div><div class="station-grid">${list.map((s,i) => {
@@ -29,16 +29,21 @@ function radio() {
 }
 function podPage() {
   return `<section class="pod-page">
-    <header class="pod-banner"><div><h1>We4zlP0D</h1><p>Continue your listening session away from the desk.</p></div></header>
-    <section class="pod-session"><div class="section-title"><h2>Desktop queue</h2><span id="pod-count"></span></div>
-      <div id="pod-current"></div><div id="pod-music-status" role="status"></div><p id="pod-confirmed"></p><button class="secondary" id="pod-follow" data-action="pod-follow" hidden>Follow this browser</button><div class="hero-actions"><button class="primary" data-action="resume">Drop the Needle</button></div></section>
-
-    <div class="pod-panels"><section><h2>Dock activity</h2><div id="pod-dock"></div><small id="pod-refresh-note"></small></section>
-      <section><h2>Flight Recorder</h2><div id="pod-edition"></div><p id="pod-schedule"></p><p id="pod-radio-ready"></p><p>The dock automatically copies the latest playable recording to your SD card. Switch stations on the player at the same point in the recording.</p>
-      <button class="text-button" data-view="flight-recorder">Open Flight Recorder ↗</button></section></div>
-    <section class="pod-crates"><h2>New in the Crates</h2><p>Your dock copies the newest albums after your queue, up to 12 albums as space allows.</p>
+    <header class="pod-banner"><div><h1>We4zlP0D</h1><label for="pod-device">Selected player</label><select id="pod-device"></select></div></header>
+    <div class="pod-toolbar">
+      <details class="pod-manage"><summary>Manage players</summary><form id="pod-device-form"><label>Player name <input name="name" maxlength="32" required></label>
+      <button class="secondary" id="pod-rename" value="rename">Rename player</button><button class="secondary" value="add">Pair new player</button></form><button class="secondary" id="pod-verify" type="button" hidden>Verify card</button><small id="pod-verify-status" role="status"></small><p id="pod-pair-result" role="status"></p><button class="text-button" id="pod-manage-stop" data-action="pod-stop-follow" hidden>Stop following</button></details></div>
+    <section class="pod-signal" aria-labelledby="pod-dock"><h2 id="pod-dock">Checking dock…</h2><div id="pod-music-status" role="status"></div><small id="pod-refresh-note"></small></section>
+    <dl class="pod-stats" hidden><div><dt>Verified queue</dt><dd id="pod-tracks"></dd></div><div><dt>Free at last sync</dt><dd id="pod-space"></dd></div><div><dt>Recording on card</dt><dd id="pod-stations"></dd></div></dl>
+    <div class="pod-listening"><section class="pod-session"><div class="section-title"><h2>Desktop queue</h2><span id="pod-count"></span></div>
+      <div id="pod-current"></div><details id="pod-receipt"><summary>Last verified queue</summary><div id="pod-confirmed"></div></details>
+      <div class="pod-source"><small id="pod-listening-status" role="status"></small><button class="text-button" id="pod-follow" data-action="pod-follow" hidden>Follow this browser</button><button class="text-button" id="pod-stop-follow" data-action="pod-stop-follow" hidden>Stop following</button></div>
+      <button class="primary" data-action="resume">Drop the Needle</button></section>
+      <section class="pod-recording"><div class="section-title"><h2>Flight Recorder</h2><button class="text-button" data-view="flight-recorder" aria-label="Open Flight Recorder">Open ↗</button></div>
+      <div id="pod-edition"></div><p id="pod-radio-ready"></p><small id="pod-schedule"></small></section></div>
+    <section class="pod-crates"><div class="section-title"><h2>New in the Crates</h2></div><p>Up to 12 recent albums sync automatically as space allows.</p>
       <div class="pod-albums">${state.albums.map((a,i)=>`<button class="album-card" data-album="${i}">${cover(a)}<strong>${esc(a.name)}</strong><small>${esc(a.artist)}</small></button>`).join('') || (state.podAlbumsError ? 'Could not load recent albums from the library.' : 'No recent albums available.')}</div></section>
-    <section class="pod-discovery"><h2>Deep in the Crates</h2><p>Rarely Played draws from tracks with fewer pod listens. Off the Radar draws from tracks that appeared in fewer pod mixes. Each shelf holds up to 20 tracks and keeps its order between docks.</p></section>
+    <section class="pod-discovery"><h2>Deep in the Crates</h2><dl><div><dt>Rarely Played</dt><dd>Up to 20 tracks you seldom play on the pod.</dd></div><div><dt>Off the Radar</dt><dd>Up to 20 tracks that seldom appear in your pod mixes.</dd></div></dl></section>
     <section class="pod-return"><img src="we4zlp0d-dock.webp" alt="" width="96" height="96">
       <div><h2>Back at your desk</h2><p>Resume from a bookmark saved on the player.</p><button class="secondary" data-action="we4zlp0d-return">Continue on desktop</button></div></section>
     <details class="pod-backup"><summary>Manual transfer</summary><button class="secondary" data-action="we4zlp0d-take" aria-controls="pod-plan" aria-expanded="false">Export queue file</button><section id="pod-plan" class="pod-plan" hidden></section></details>
@@ -51,7 +56,7 @@ export function updatePodSession() {
   const bookmark=podLibraryBookmark(), t=bookmark?.item;
   const available=!!bookmark;
   const count=available ? 1+state.queue.filter(item=>!item.url).length : 0;
-  const desc=available ? `<strong>${esc(t.title || t.id)}</strong><small>${esc(t.artist)} · <span id="pod-position"></span></small>` : '<p>Play a library track or drop the needle to start a queue.</p>';
+  const desc=available ? `${t.coverArt ? cover(t,true) : ''}<div><strong>${esc(t.title || t.id)}</strong><small>${esc(t.artist)} · <span id="pod-position"></span></small></div>` : '<p>Play a library track or drop the needle to start a queue.</p>';
   if(target._podHTML!==desc){target.innerHTML=desc;target._podHTML=desc;}
   if(available){
     $('#pod-position').textContent=duration(bookmark.seconds);

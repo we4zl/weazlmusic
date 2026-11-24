@@ -1,9 +1,7 @@
 package server
 
 import (
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"net"
 	"net/http"
 	"net/url"
@@ -35,37 +33,55 @@ func (a *apiV1) startDock() error {
 	return nil
 }
 
-func (a *apiV1) podSource(se *session) (string, error) {
-	var source string
-	err := a.get("pod-source", se.stateKey(), accountID(se.User), &source)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", nil
-	}
-	return source, err
-}
-
-func (a *apiV1) followBrowser(w http.ResponseWriter, r *http.Request, se *session, device string) {
-	if se.User != a.nightly.Username || a.nightly.ID == "" || a.libraryID(se) != a.nightly.Library || !uuidKey.MatchString(device) {
-		verror(w, 403, "unavailable", "This dock is paired with another library.")
-		return
-	}
-	if err := a.put("pod-source", se.stateKey(), accountID(se.User), device); err != nil {
-		verror(w, 503, "storage_unavailable", "Could not save the listening source.")
-		return
-	}
-	w.WriteHeader(204)
-}
-
 func (a *apiV1) dockRequest(w http.ResponseWriter, r *http.Request) {
-	se, err := a.deviceIdentity(deviceSession{Username: a.nightly.Username, AccessExpires: a.now().Add(3 * time.Minute)})
-	if err != nil || se.ServerURL == "" || a.libraryID(se) != a.nightly.Library {
+	user, lib := a.nightly.Username, a.nightly.Library
+	var pod namedPod
+	if token := r.Header.Get("X-Weazl-Pod-Key"); token != "" {
+		if len(token) != 64 || a.get("named-pod", digest(token), "*", &pod) != nil {
+			verror(w, 403, "unknown_player", "Pair this player first.")
+			return
+		}
+		user, lib = pod.Username, pod.Library
+	} else if user == "" {
+		verror(w, 403, "unpaired", "Pair this player first.")
+		return
+	}
+	se, err := a.deviceIdentity(deviceSession{Username: user, AccessExpires: a.now().Add(3 * time.Minute)})
+	if err != nil || se.ServerURL == "" || a.libraryID(se) != lib {
 		verror(w, 403, "unavailable", "Dock library unavailable.")
 		return
 	}
+	se.PodID = pod.ID
 	se.ctx = r.Context()
 	p := r.URL.Path
 	id := r.URL.Query().Get("id")
 	switch {
+	case r.Method == "GET" && p == "/identity" && pod.ID != "":
+		dataOut(w, 200, pod)
+	case r.Method == "PUT" && p == "/radio-status" && pod.ID != "":
+		var report dockReport
+		if decode(r, &report) != nil || report.Total < 0 || report.Done < 0 || report.Done > report.Total || len(report.Phase) > 32 || len(report.Name) > 256 {
+			verror(w, 422, "invalid", "Invalid recorder receipt.")
+			return
+		}
+		report.Account = accountID(se.User)
+		report.Library = lib
+		report.Seen = a.now().UTC()
+		if err := a.put("pod-radio", pod.ID, report.Account, report); err != nil {
+			verror(w, 503, "storage", "Cannot save recorder receipt.")
+			return
+		}
+		if report.Phase == "ready" {
+			if err := a.put("pod-radio-ready", pod.ID, report.Account, report); err != nil {
+				verror(w, 503, "storage", "Cannot save recorder receipt.")
+				return
+			}
+		}
+		w.WriteHeader(204)
+	case r.Method == "PUT" && p == "/verify-result" && se.PodID != "":
+		a.verifyRequest(w, r, se)
+	case r.Method == "GET" && p == "/radio-edition" && se.PodID != "":
+		a.receiptRadio(w, r, se)
 	case r.Method == "GET" && p == "/sources":
 		// List only browser queues from this account and this library.
 		prefix := se.stateKey() + ":browser:"
@@ -95,30 +111,48 @@ func (a *apiV1) dockRequest(w http.ResponseWriter, r *http.Request) {
 		}
 		dataOut(w, 200, out)
 	case r.Method == "PUT" && p == "/source":
-		a.followBrowser(w, r, se, id)
+		a.followDockBrowser(w, se, id)
 	case r.Method == "GET" && p == "/queue":
-		source, e := a.podSource(se)
+		source, q, e := a.dockBookmark(se)
 		if e != nil {
 			verror(w, 503, "storage_unavailable", "Could not read source.")
 			return
 		}
-		var q userState
-		if source != "" {
-			key := se.stateKey() + ":browser:" + source
-			e = a.get("pod-checkpoint", key, accountID(se.User), &q)
-			if errors.Is(e, sql.ErrNoRows) {
-				e = a.get("queue", key, accountID(se.User), &q)
-			}
-			if e != nil && !errors.Is(e, sql.ErrNoRows) {
-				verror(w, 503, "storage_unavailable", "Could not read queue.")
-				return
-			}
+		sends, err := a.pendingPodSends(se)
+		if err != nil {
+			verror(w, 503, "storage_unavailable", "Could not read the pod sync queue.")
+			return
 		}
-		dataOut(w, 200, map[string]any{"source": source, "current": q.Current, "queue": q.Queue})
+		if se.PodID != "" && r.URL.Query().Get("receipts") == "1" {
+			a.receiptQueue(w, r, se, source, q, sends)
+			return
+		}
+		dataOut(w, 200, map[string]any{"source": source, "current": q.Current, "queue": q.Queue, "sends": sends})
+	case r.Method == "POST" && p == "/delivered":
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		a.confirmPodSends(w, r, se)
 	case r.Method == "GET" && p == "/recent":
 		result, e := a.s.call(r.Context(), se, "getAlbumList2", url.Values{"type": {"newest"}, "size": {"12"}})
 		if e != nil {
 			verror(w, 502, "upstream_unavailable", "Recent albums unavailable.")
+			return
+		}
+		if se.PodID != "" && r.URL.Query().Get("receipts") == "1" {
+			var albums struct {
+				Album []struct {
+					ID, CoverArt, Changed string
+					SongCount             int
+				}
+			}
+			if err := json.Unmarshal(result["albumList2"], &albums); err != nil {
+				verror(w, 502, "upstream", "Invalid albums.")
+				return
+			}
+			raw, _ := json.Marshal(albums)
+			rev := digest(string(raw))
+			a.podArt.Store(se.PodID, artRevision{rev, a.now()})
+			dataOut(w, 200, map[string]any{"albums": result["albumList2"], "revision": rev})
 			return
 		}
 		dataOut(w, 200, result["albumList2"])
@@ -137,30 +171,4 @@ func (a *apiV1) dockRequest(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.NotFound(w, r)
 	}
-}
-
-func (a *apiV1) checkpoint(w http.ResponseWriter, r *http.Request, se *session) {
-	source, e := a.podSource(se)
-	device := r.Header.Get("X-Weazl-Device")
-	if e != nil || !uuidKey.MatchString(device) || device != source || se.User != a.nightly.Username || a.libraryID(se) != a.nightly.Library {
-		verror(w, 403, "unpaired", "This browser is not the listening source.")
-		return
-	}
-	var q userState
-	if decode(r, &q) != nil || !validSavedTrack(q.Current, false) || len(q.Queue) > 1000 {
-		verror(w, 422, "invalid", "Invalid playing queue.")
-		return
-	}
-	for _, row := range q.Queue {
-		if !validSavedTrack(row, false) {
-			verror(w, 422, "invalid", "Invalid queue entry.")
-			return
-		}
-	}
-	q.Stations = nil
-	if a.put("pod-checkpoint", se.stateKey()+":browser:"+device, accountID(se.User), q) != nil {
-		verror(w, 503, "storage_unavailable", "Could not save listening position.")
-		return
-	}
-	w.WriteHeader(204)
 }

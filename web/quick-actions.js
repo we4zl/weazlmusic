@@ -1,4 +1,6 @@
 import {state, $, track, radioTrack, toast} from './state.js';
+import {flightAPI} from './flight-api.js';
+import {queueEntry} from './device.js';
 import {api, library, saveState} from './api.js';
 import {renderMain, renderPlayer, renderQueue} from './render.js';
 import {navigate} from './navigation.js';
@@ -33,8 +35,16 @@ async function collection(kind, id, signal) {
 }
 function queueTracks(tracks, next = false) {
   if (!tracks.length) throw new Error('This collection has no playable tracks.');
-  state.queue = next ? [...tracks,...state.queue] : [...state.queue,...tracks];
+  const entries = tracks.map(queueEntry);
+  state.queue = next ? [...entries,...state.queue] : [...state.queue,...entries];
   renderQueue();renderPlayer();saveState();toast(next ? 'Playing next.' : 'Added to your queue.');
+}
+async function sendToPod(kind, item, tracks, signal) {
+  if (!tracks.length) throw new Error('This collection has no playable tracks.');
+  await flightAPI('portable/send','POST',{
+    kind, id:item.id, name:item.name || item.title, tracks:tracks.map(t => t.id)
+  },undefined,signal);
+  toast('Queued for the next We4zlP0d sync.');
 }
 function itemsFor(target) {
   const kind = target.dataset.quickKind, index = Number(target.dataset.quickIndex);
@@ -56,6 +66,7 @@ function itemsFor(target) {
         star ? state.favorites.add(t.id) : state.favorites.delete(t.id);renderPlayer();
         if (['home','favorites'].includes(state.view)) await navigate(state.view,state.query);
       });
+      add('Send to We4zlP0d',signal => sendToPod('track',t,[t],signal));
       add('Download original',() => download('track',t.id));
       if (kind === 'track' && state.view === 'playlist' && !state.query && state.playlist?.owner === state.connection?.username) {
         const playlist = state.playlist;
@@ -71,6 +82,10 @@ function itemsFor(target) {
     add('Play next',withTracks(tracks => queueTracks(tracks,true)));
     add('Add to queue',withTracks(tracks => queueTracks(tracks)));
     add('Add to playlist',withTracks(tracks => addToPlaylistDialog(tracks,`this ${kind}`)));
+    add('Send to We4zlP0d',async signal => {
+      const out = await collection(kind,item.id,signal);
+      await sendToPod(kind,out.item,out.tracks,signal);
+    });
     add(`Download ${kind} ZIP`,() => download(kind,item.id));
     if (kind === 'playlist' && item.owner === state.connection?.username) {
       add('Rename playlist',() => {state.playlist = item;playlistDialog('rename');});

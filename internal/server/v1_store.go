@@ -22,6 +22,10 @@ type apiV1 struct {
 	s                *Server
 	db               *sql.DB
 	mu               sync.Mutex
+	podWriterMu      sync.Mutex
+	podVerifyMu      sync.Mutex
+	podProofs        sync.Map
+	podArt           sync.Map
 	ctx              context.Context
 	cancel           context.CancelFunc
 	wg               sync.WaitGroup
@@ -99,13 +103,15 @@ func newV1(s *Server) (*apiV1, error) {
 		return nil, err
 	}
 	if s.cfg.NightlySourceJob != "" {
-		if err = a.configureNightly(s.cfg.NightlySourceJob); err == nil {
-			err = a.startDock()
-		}
+		err = a.configureNightly(s.cfg.NightlySourceJob)
 		if err != nil {
 			a.close()
 			return nil, err
 		}
+	}
+	if err = a.startDock(); err != nil {
+		a.close()
+		return nil, err
 	}
 	if !s.cfg.DisableWorkers {
 		a.wg.Add(1)

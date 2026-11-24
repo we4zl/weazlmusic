@@ -78,7 +78,7 @@ func (a *apiV1) mutation(w http.ResponseWriter, r *http.Request, se *session, ne
 		return
 	}
 	norm, _ := json.Marshal(normalized)
-	id := digest(accountID(se.User) + a.libraryID(se) + r.Method + r.URL.Path + key)
+	id := digest(accountID(se.User) + a.libraryID(se) + r.Method + r.URL.Path + se.PodID + key)
 	hash := digest(string(norm) + r.Header.Get("If-Match"))
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -128,6 +128,13 @@ func (a *apiV1) routes(m *http.ServeMux) {
 	m.HandleFunc("POST /api/v1/auth/refresh", a.refresh)
 	handler := a.auth(func(w http.ResponseWriter, r *http.Request, se *session) {
 		p := strings.TrimPrefix(r.URL.Path, "/api/v1/")
+		if strings.HasPrefix(p, "portable/") {
+			var ok bool
+			se, ok = a.selectPod(w, r, se)
+			if !ok {
+				return
+			}
+		}
 		if p == "portable/checkpoint" && r.Method == "PUT" {
 			a.checkpoint(w, r, se)
 			return
@@ -160,8 +167,14 @@ func (a *apiV1) dispatch(w http.ResponseWriter, r *http.Request, se *session) {
 			}
 			return []string{"user"}
 		}()})
+	case p == "portable/devices" && (r.Method == "POST" || r.Method == "GET" || r.Method == "PATCH"):
+		a.portableDevices(w, r, se)
+	case p == "portable/verify" && r.Method == "POST":
+		a.verifyRequest(w, r, se)
+	case p == "portable/send" && r.Method == "POST":
+		a.enqueuePod(w, r, se)
 	case p == "portable/source" && r.Method == "PUT":
-		a.followBrowser(w, r, se, r.Header.Get("X-Weazl-Device"))
+		a.changePodWriter(w, r, se)
 	case p == "portable/status" && (r.Method == "GET" || r.Method == "PUT"):
 		a.portableStatus(w, r, se)
 	case p == "capabilities" && r.Method == "GET":
