@@ -1,0 +1,27 @@
+{
+  "release": "1.0",
+  "build": 64,
+  "hardware": "HiFi Walker H2 USB-C hw4 (Ingenic X1000)",
+  "factorySha256": "5e28f9d56bff9cbb8b4e03a97c9fbe230d88ed570488aab31fdf01d5ade7ae0f",
+  "controller": {
+    "name": "BCM4343A1_001.002.009.0122.0538.hcd",
+    "bytes": 35421,
+    "offset": 202940,
+    "sha256": "9873217acdeaee78bd502a31fa876dc1b120c9d07ca8c16420853bc44ba64972"
+  },
+  "expanded": {
+    "bytes": 424776,
+    "sha256": "9ff1512dce76daf9049e75103220b2466232c15527eeb03a03cabcf35b248b80",
+    "publicSha256": "8b4a2572a811502df071bf68c1c0d1b733ca17407a4cda1642ce45202a9b403f"
+  },
+  "payload": {
+    "bytes": 220643,
+    "offset": 18644,
+    "sha256": "9a591a0d193ecb01585ae49634c2712f41f55130b49417aa5a4c7dfa5932a5f1"
+  },
+  "installer": {
+    "bytes": 239596,
+    "sha256": "6d1197958bc5fba1c1d76ab87efd658139a9b72b65980268f72605f751ecf4e6",
+    "publicSha256": "487efbbaa074f342101baff393ae62c4decaa586446d3954c3a2d8016d744e85"
+  }
+}

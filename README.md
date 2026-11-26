@@ -12,11 +12,11 @@ Complete endpoint documentation: [API reference](docs/API_REFERENCE.md) (native 
 
 ## Experimental HiFi Walker H2 firmware
 
-We4zlP0D X turns the USB-C HiFi Walker H2 (hw4, Ingenic X1000) into an offline companion for We4zlMusic. Build H51 plays synced music from microSD, displays album art, supports Bluetooth headphones and reports card revision hashes to the dock.
+We4zlP0D X 1.0 turns the USB-C HiFi Walker H2 (hw4, Ingenic X1000) into an offline companion for We4zlMusic. Build H64 adds faster menu feedback, six-row library views and a reading hold for long track titles. It plays synced music and Flight Recorder from microSD through Bluetooth headphones.
 
-The player firmware was developed from the ground up. Its player and board code reuse no code from the original H2 firmware or Rockbox. The Bluetooth controller runs separate Broadcom microcode supplied with the factory firmware. The H51 package uses the owner's copy of that patch to reproduce the hardware-tested USB updater.
+The player firmware was developed from the ground up. Its player and board code reuse no code from the original H2 firmware or Rockbox. The Bluetooth controller runs separate Broadcom microcode supplied with the factory firmware. The 1.0 kit uses the owner's copy of that patch to reproduce the hardware-tested USB updater.
 
-[Download the experimental H51 flash kit](https://github.com/we4zl/weazlmusic/releases/tag/hifiwalker-h2-h51) · [Check compatibility and read the installation guide](Firmware/HifiWalker/H51/README.md).
+[Download the experimental H2 1.0 flash kit](https://github.com/we4zl/weazlmusic/releases/tag/hifiwalker-h2-v1.0) · [Compatibility and installation](Firmware/HifiWalker/1.0/README.md) · [Factory installation via H51](Firmware/HifiWalker/H51/README.md#first-install-on-a-factory-player-experimental).
 
 ## Ignition
 
